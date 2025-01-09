@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from user.models import User, NormalPlayer
-from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer
+from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer
 
 
 class UserAuthView(viewsets.GenericViewSet):
@@ -41,9 +41,16 @@ class UserAuthView(viewsets.GenericViewSet):
                             status=status.HTTP_200_OK)
         return Response(data={'error': _('Invalid OTP.')}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
-    @action(methods=['POST'], detail=False, url_path="player/login", url_name="player-login")
+    @action(methods=['POST'], detail=False, url_path="player/login", url_name="player-login",
+            serializer_class=NormalPlayerSignInSerializer)
     def player_signin(self, request, *args, **kwargs):
-        pass
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user, token, errors = NormalPlayer.attempt_login(email=data["email"], password=data["password"])
+        if errors:
+            return Response(data={'error': errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={'credentials': token, 'user': self.serializer_class(user).data}, status=status.HTTP_200_OK)
 
     @action(methods=['POST'], detail=False, url_path="guest/signup", url_name="guest-signup")
     def guest_signup(self, request, *args, **kwargs):

@@ -57,7 +57,7 @@ class PlayerAdmin(admin.ModelAdmin):
 
 @admin.register(GuestPlayer)
 class GuestUserAdmin(PlayerAdmin):
-    list_display = ['device_id', "first_name", "last_name", "is_staff", ]
+    list_display = ['device_id', "first_name", "last_name", ]
     search_fields = PlayerAdmin.search_fields + ['device_id']
 
 

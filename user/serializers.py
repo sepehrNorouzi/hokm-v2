@@ -36,3 +36,12 @@ class NormalPlayerVerifySerializer(serializers.ModelSerializer):
 
     def get_credentials(self, obj: NormalPlayer):
         return obj.get_token()
+
+
+class NormalPlayerSignInSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = NormalPlayer
+        fields = ['email', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password', ]

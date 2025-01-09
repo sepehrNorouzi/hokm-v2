@@ -5,6 +5,7 @@ from django.contrib.auth.models import PermissionsMixin, AbstractUser
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import QuerySet
 from django.template.loader import render_to_string
 from django.utils import translation
 from django.utils.html import strip_tags
@@ -150,3 +151,18 @@ class NormalPlayer(Player):
     def create(cls, email: str, password: str, **extra_fields):
         player = cls.objects.create_user(email=email, password=password, **extra_fields)
         return player
+
+    @classmethod
+    def attempt_login(cls, email: str, password: str):
+        user: QuerySet = cls.objects.filter(email=email)
+        if not user.exists():
+            return None, None, 'Invalid credentials.'
+
+        user: NormalPlayer = user.first()
+
+        is_correct = user.check_password(raw_password=password)
+
+        if not is_correct:
+            return None, None, 'Invalid credentials.'
+
+        return user, user.get_token(), None
