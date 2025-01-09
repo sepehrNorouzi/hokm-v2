@@ -1,11 +1,19 @@
+import random
+
+from django.conf import settings
 from django.contrib.auth.models import PermissionsMixin, AbstractUser
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.template.loader import render_to_string
+from django.utils import translation
+from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 
 from user.choices import Gender
+from user.exceptions import ReVerifyException
 from user.managers import UserManager
 
 
@@ -80,6 +88,7 @@ class GuestPlayer(Player):
 
 
 class NormalPlayer(Player):
+    is_verified = models.BooleanField(default=False, verbose_name=_("Is verified"))
 
     class Meta:
         verbose_name = _("Normal player")
@@ -90,3 +99,42 @@ class NormalPlayer(Player):
 
     def __str__(self):
         return self.email or ""
+
+    def send_email_verification(self):
+        if self.is_verified:
+            raise ReVerifyException(message=_("Player is already verified."),)
+
+        otp = ''.join([str(random.randint(0, 9)) for __ in range(6)])
+
+        # Save the OTP to the user model (assuming you have a field for OTP)
+        cache.set(f"{self.id}_EMAIL_VERIFY_OTP", otp, )
+
+        subject = _(f"{settings.PROJECT_NAME} email verification.")
+
+        # Create the HTML message
+        html_message = render_to_string('email_verification.html', {
+            'user': self,
+            'otp': otp,
+            'project_name': settings.PROJECT_NAME,
+            'LANGUAGE_CODE': translation.get_language()
+        })
+
+        # Create a plain text version of the message
+        plain_message = strip_tags(html_message)
+
+        # Send the email
+        self.email_user(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            html_message=html_message,
+        )
+
+    def verify_email(self, otp: str) -> bool:
+        cached_otp = cache.get(f"{self.id}_EMAIL_VERIFY_OTP")
+
+        if cached_otp:
+            cache.delele(f"{self.id}_EMAIL_VERIFY_OTP")
+            return cached_otp == otp
+
+        return False

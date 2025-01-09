@@ -6,6 +6,8 @@ class UserManager(BaseUserManager):
         if not email and not device_id:
             raise ValueError('Users must have an email or device ID')
         username = email or device_id
+        if "username" in extra_fields.keys():
+            del extra_fields['username']
         user = self.model(
             username=username,
             email=self.normalize_email(email) if email else None,
