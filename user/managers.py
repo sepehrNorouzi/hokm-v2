@@ -2,7 +2,8 @@ from django.contrib.auth.base_user import BaseUserManager
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email=None, device_id=None, password=None, **extra_fields):
+
+    def create_user_base(self, email=None, device_id=None, password=None, **extra_fields):
         if not email and not device_id:
             raise ValueError('Users must have an email or device ID')
         username = email or device_id
@@ -15,6 +16,10 @@ class UserManager(BaseUserManager):
             **extra_fields
         )
         user.set_password(password)
+        return user
+
+    def create_user(self, email=None, device_id=None, password=None, **extra_fields):
+        user = self.create_user_base(email, device_id, password, **extra_fields)
         user.save(using=self._db)
         return user
 
@@ -22,3 +27,12 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(username=email, email=email, password=password, **extra_fields)
+
+
+class NormalPlayerManager(UserManager):
+    def create_user(self, email=None, device_id=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_verified', False)
+        user = self.create_user_base(email, device_id, password, **extra_fields)
+        user.save(using=self._db)
+        user.send_email_verification()
+        return user

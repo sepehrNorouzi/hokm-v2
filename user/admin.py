@@ -39,16 +39,13 @@ class PlayerAdmin(admin.ModelAdmin):
     list_display = ["email", 'device_id', "first_name", "last_name", "is_staff", ]
     list_filter = UserBaseAdmin.list_filter + ['gender']
     fieldsets = [
-        (None, {"fields": ("email", "device_id", )}),
+        (None, {"fields": ("email", "device_id",)}),
         (_('Block info'), {
             'fields': ('is_blocked',)
         }),
-        (_('Personal info'), {
-            'fields': ('gender', 'birth_date',)
-        }),
         (_('Profile info'), {
             'fields': (
-                'profile_name', 'cup', 'xp',
+                'profile_name', 'cup', 'xp', 'gender', 'birth_date',
             )
         }),
         (_("Important dates"), {"fields": ("last_login", "date_joined")})
@@ -66,5 +63,6 @@ class GuestUserAdmin(PlayerAdmin):
 
 @admin.register(NormalPlayer)
 class NormalPlayerAdmin(PlayerAdmin):
-    list_display = ["email", "first_name", "last_name", "is_staff", ]
+    list_display = ["email", "first_name", "last_name", "is_staff", 'is_verified']
     search_fields = PlayerAdmin.search_fields + ['email']
+    list_filter = PlayerAdmin.list_filter + ['is_verified']

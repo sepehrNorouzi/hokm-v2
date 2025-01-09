@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from user.choices import Gender
 from user.exceptions import ReVerifyException
-from user.managers import UserManager
+from user.managers import UserManager, NormalPlayerManager
 
 
 class User(AbstractUser, PermissionsMixin):
@@ -90,6 +90,8 @@ class GuestPlayer(Player):
 class NormalPlayer(Player):
     is_verified = models.BooleanField(default=False, verbose_name=_("Is verified"))
 
+    objects = NormalPlayerManager()
+
     class Meta:
         verbose_name = _("Normal player")
         verbose_name_plural = _("Normal players")
@@ -131,10 +133,20 @@ class NormalPlayer(Player):
         )
 
     def verify_email(self, otp: str) -> bool:
+        if self.is_verified:
+            return True
         cached_otp = cache.get(f"{self.id}_EMAIL_VERIFY_OTP")
 
         if cached_otp:
-            cache.delele(f"{self.id}_EMAIL_VERIFY_OTP")
-            return cached_otp == otp
+            cache.delete(f"{self.id}_EMAIL_VERIFY_OTP")
+            if cached_otp == otp:
+                self.is_verified = True
+                self.save()
+                return True
 
         return False
+
+    @classmethod
+    def create(cls, email: str, password: str, **extra_fields):
+        player = cls.objects.create_user(email=email, password=password, **extra_fields)
+        return player
