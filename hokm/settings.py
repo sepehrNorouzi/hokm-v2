@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from cryptography.fernet import Fernet
 
 # EMAIL CONFIG
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND")
@@ -127,6 +128,8 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("REFRESH_TOKEN_LIFETIME", "1"))),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+CIPHER_SUIT = Fernet(os.environ.get("ENCRYPTION_KEY"))
 
 for d in NEEDED_DIRS:
     if not os.path.isdir(d):

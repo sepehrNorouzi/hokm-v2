@@ -12,10 +12,9 @@ from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
-
 from user.choices import Gender
 from user.exceptions import ReVerifyException
-from user.managers import UserManager, NormalPlayerManager
+from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
 
 
 class User(AbstractUser, PermissionsMixin):
@@ -76,6 +75,9 @@ class Player(User):
 
 
 class GuestPlayer(Player):
+    recovery_string = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Recovery string"))
+
+    objects = GuestPlayerManager()
 
     class Meta:
         verbose_name = _("Guest player")
@@ -86,6 +88,11 @@ class GuestPlayer(Player):
 
     def __str__(self):
         return self.device_id or ""
+
+    @classmethod
+    def create(cls, device_id: str, password, **extra_fields):
+        player = GuestPlayer.objects.create_user(device_id=device_id, password=password, **extra_fields)
+        return player
 
 
 class NormalPlayer(Player):
@@ -105,7 +112,7 @@ class NormalPlayer(Player):
 
     def send_email_verification(self):
         if self.is_verified:
-            raise ReVerifyException(message=_("Player is already verified."),)
+            raise ReVerifyException(message=_("Player is already verified."), )
 
         otp = ''.join([str(random.randint(0, 9)) for __ in range(6)])
 

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.base_user import BaseUserManager
 
 
@@ -35,4 +36,21 @@ class NormalPlayerManager(UserManager):
         user = self.create_user_base(email, device_id, password, **extra_fields)
         user.save(using=self._db)
         user.send_email_verification()
+        return user
+
+
+class GuestPlayerManager(UserManager):
+
+    @staticmethod
+    def _create_recovery_string(device_id: str) -> str:
+        cipher_suite = settings.CIPHER_SUITE
+        plaintext_bytes = device_id.encode()
+        encrypted_bytes = cipher_suite.encrypt(plaintext_bytes)
+        encrypted_string = encrypted_bytes.decode()
+        return encrypted_string
+
+    def create_user(self, email=None, device_id=None, password=None, **extra_fields):
+        user = self.create_user_base(email, device_id, password, **extra_fields)
+        user.recovery_string = GuestPlayerManager._create_recovery_string(device_id)
+        user.save(using=self._db)
         return user
