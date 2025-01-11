@@ -12,6 +12,39 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
+# MINIO
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY')
+MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
+MINIO_ACCESS_URL = os.environ.get('MINIO_ACCESS_URL')
+AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = True
+AWS_S3_FILE_OVERWRITE = False
+
+STORAGES = {
+    "default": {
+        "BACKEND": 'storages.backends.s3boto3.S3Boto3Storage',
+        "OPTIONS": {
+            'access_key': MINIO_ACCESS_KEY,
+            'secret_key': MINIO_SECRET_KEY,
+            'bucket_name': MINIO_BUCKET_NAME,
+            'endpoint_url': MINIO_ENDPOINT,
+            'default_acl': None,
+            'querystring_auth': True,
+            'file_overwrite': False,
+        },
+    },
+    'staticfiles': {
+        'BACKEND': DEFAULT_FILE_STORAGE,
+    }
+}
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -28,11 +61,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'storages',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
     'user.apps.UserConfig',
     'common.apps.CommonConfig',
+    'shop.apps.ShopConfig',
 ]
 
 AUTH_USER_MODEL = 'user.User'
@@ -146,7 +181,7 @@ for d in NEEDED_DIRS:
     if not os.path.isdir(d):
         os.mkdir(d)
 
-STATIC_URL = '/static/'
+STATIC_URL = f'{MINIO_ACCESS_URL}/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 TEMP_URL = '/temp/'
@@ -156,7 +191,7 @@ STATICFILES_DIRS = [
     TEMP_ROOT,
 ]
 
-MEDIA_URL = '/media/'
+MEDIA_URL = f'{MINIO_ACCESS_URL}/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
