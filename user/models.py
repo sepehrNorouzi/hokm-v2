@@ -73,6 +73,10 @@ class Player(User):
         user = Player.objects.filter(id=refresh.access_token.payload['id']).first()
         return user.get_token(refresh)
 
+    @classmethod
+    def attempt_login(cls, **kwargs):
+        raise NotImplementedError
+
 
 class GuestPlayer(Player):
     recovery_string = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Recovery string"))
@@ -93,6 +97,20 @@ class GuestPlayer(Player):
     def create(cls, device_id: str, password, **extra_fields):
         player = GuestPlayer.objects.create_user(device_id=device_id, password=password, **extra_fields)
         return player
+
+    @classmethod
+    def attempt_login(cls, device_id: str, password: str):
+        user: QuerySet = cls.objects.filter(device_id=device_id)
+        if not user.exists():
+            return None, None, 'Invalid credentials.'
+        user: GuestPlayer = user.first()
+
+        is_correct = user.check_password(raw_password=password)
+
+        if not is_correct:
+            return None, None, 'Invalid credentials.'
+
+        return user, user.get_token(), None
 
 
 class NormalPlayer(Player):

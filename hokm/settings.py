@@ -129,7 +129,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-CIPHER_SUIT = Fernet(os.environ.get("ENCRYPTION_KEY"))
+CIPHER_SUITE = Fernet(os.environ.get("ENCRYPTION_KEY"))
 
 for d in NEEDED_DIRS:
     if not os.path.isdir(d):

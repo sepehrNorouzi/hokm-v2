@@ -6,7 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from user.models import User, NormalPlayer, GuestPlayer
-from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer
+from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
+    GuestPlayerSignUpSerializer
 from utils.random_functions import generate_random_string
 
 
@@ -54,13 +55,18 @@ class UserAuthView(viewsets.GenericViewSet):
         return Response(data={'credentials': token, 'user': self.serializer_class(user).data},
                         status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="guest/signup", url_name="guest-signup")
+    @action(methods=['POST'], detail=False, url_path="guest/signup", url_name="guest-signup",
+            serializer_class=GuestPlayerSignUpSerializer)
     def guest_signup(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
         password = generate_random_string(length=10)
-        user = GuestPlayer.objects.create_user()
+        try:
+            user = serializer.save(password=password)
+        except IntegrityError as e:
+            return Response({'error': _("User already exists.")}, status=status.HTTP_400_BAD_REQUEST)
+        data = {**self.serializer_class(user).data, "password": password}
+        return Response(data=data, status=status.HTTP_201_CREATED)
 
     @action(methods=['POST'], detail=False, url_path="guest/login", url_name="guest-login")
     def guest_signin(self, request, *args, **kwargs):
