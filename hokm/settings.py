@@ -78,6 +78,16 @@ DATABASES = {
     }
 }
 
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get('REDIS_URI', ""),
+        "TIMEOUT": int(os.getenv('REDIS_TIMEOUT', default='3600')),
+        "KEY_PREFIX": os.getenv('REDIS_KEY_PREFIX', default=PROJECT_NAME),
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

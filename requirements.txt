@@ -6,3 +6,6 @@ psycopg2-binary==2.9.10
 markdown==3.7
 django-filter==24.3
 cryptography==44.0.0
+django-redis==5.4.0
+redis==5.2.1
+
