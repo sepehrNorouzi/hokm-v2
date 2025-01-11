@@ -66,3 +66,13 @@ class GuestPlayerSignUpSerializer(serializers.ModelSerializer):
 
     def get_credentials(self, obj: GuestPlayer):
         return obj.get_token()
+
+
+class GuestPlayerSignInSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    device_id = serializers.CharField(required=True)
+
+    class Meta:
+        model = GuestPlayer
+        fields = ['device_id', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password',
+                  'recovery_string']
