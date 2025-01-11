@@ -76,3 +76,14 @@ class GuestPlayerSignInSerializer(serializers.ModelSerializer):
         model = GuestPlayer
         fields = ['device_id', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password',
                   'recovery_string']
+
+
+class GuestPlayerRecoverySerializer(serializers.ModelSerializer):
+    recovery_string = serializers.CharField(write_only=True, required=True)
+    device_id = serializers.CharField(required=True)
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = GuestPlayer
+        fields = ['device_id', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name',
+                  'recovery_string', 'password', ]

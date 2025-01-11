@@ -93,6 +93,9 @@ class GuestPlayer(Player):
     def __str__(self):
         return self.device_id or ""
 
+    def _check_recovery_string(self, recovery_string):
+        return recovery_string == self.recovery_string
+
     @classmethod
     def create(cls, device_id: str, password, **extra_fields):
         player = GuestPlayer.objects.create_user(device_id=device_id, password=password, **extra_fields)
@@ -110,6 +113,21 @@ class GuestPlayer(Player):
         if not is_correct:
             return None, None, 'Invalid credentials.'
 
+        return user, user.get_token(), None
+
+    @classmethod
+    def attempt_recovery(cls, device_id, recovery_string: str, new_password: str):
+        user: QuerySet = cls.objects.filter(device_id=device_id)
+        if not user.exists():
+            return None, None, 'Invalid credentials.'
+        user: GuestPlayer = user.first()
+
+        is_correct = user._check_recovery_string(recovery_string=recovery_string)
+
+        if not is_correct:
+            return None, None, 'Invalid credentials.'
+        user.set_password(new_password)
+        user.save()
         return user, user.get_token(), None
 
 

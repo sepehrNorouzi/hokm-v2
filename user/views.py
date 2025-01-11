@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from user.models import User, NormalPlayer, GuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
-    GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer
+    GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer
 from utils.random_functions import generate_random_string
 
 
@@ -80,6 +80,18 @@ class UserAuthView(viewsets.GenericViewSet):
         return Response(data={'credentials': token, 'user': self.serializer_class(user).data},
                         status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="guest/recovery", url_name="guest-recovery")
+    @action(methods=['POST'], detail=False, url_path="guest/recovery", url_name="guest-recovery",
+            serializer_class=GuestPlayerRecoverySerializer)
     def guest_recovery(self, request, *args, **kwargs):
-        pass
+        # Will change
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        password = generate_random_string(length=10)
+        user, token, errors = GuestPlayer.attempt_recovery(device_id=data["device_id"],
+                                                           recovery_string=data["recovery_string"],
+                                                           new_password=password)
+        if errors:
+            return Response(data={'error': errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={'credentials': token, 'user': {**self.serializer_class(user).data, 'password': password}},
+                        status=status.HTTP_200_OK)
