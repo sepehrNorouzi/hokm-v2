@@ -4,5 +4,5 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 
-router.register('auth', UserAuthView, basename='auth')
+router.register('user/auth', UserAuthView, basename='auth')
 

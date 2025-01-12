@@ -178,6 +178,7 @@ class ShopPackage(Package):
     class Meta:
         verbose_name = _("Shop Package")
         verbose_name_plural = _("Shop Packages")
+        ordering = ('priority', )
 
 
 class RewardPackage(Package):

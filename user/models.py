@@ -39,6 +39,13 @@ class User(AbstractUser, PermissionsMixin):
     def get_full_name(self):
         return f"{self.first_name or ""} {self.last_name or ""}"
 
+    @property
+    def player(self):
+        if self.email:
+            return NormalPlayer.objects.get(pk=self.pk)
+        return GuestPlayer.objects.get(pk=self.pk)
+
+
 
 class Player(User):
     profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
