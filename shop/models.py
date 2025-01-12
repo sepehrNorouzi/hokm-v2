@@ -2,6 +2,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from imagekit.models.fields import ImageSpecField
+from imagekit.processors import ResizeToFill
 
 from common.models import BaseModel, SingletonCachableModel
 
@@ -31,6 +33,12 @@ class Currency(BaseModel):
     config = models.JSONField(null=True, blank=True, verbose_name=_("Currency Config"))
     type = models.CharField(verbose_name=_("Currency Type"), choices=CurrencyType.choices, max_length=100,
                             default=CurrencyType.IN_APP)
+    icon_thumbnail = ImageSpecField(
+        source='icon',
+        processors=[ResizeToFill(30, 30)],
+        format='PNG',
+        options={'quality': 60}
+    )
 
     def __str__(self):
         return self.name
@@ -177,6 +185,7 @@ class RewardPackage(Package):
         INIT_WALLET = 'initial_wallet', _('Initial Wallet')
 
     reward_type = models.CharField(verbose_name=_("Reward Type"), choices=RewardType.choices, max_length=50)
+    claimable = models.BooleanField(verbose_name=_("Claimable"), default=False)
 
     class Meta:
         verbose_name = _("Reward Package")
