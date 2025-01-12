@@ -63,6 +63,7 @@ class ShopPackageInline(admin.TabularInline):
     def has_change_permission(self, request, obj=None):
         return False
 
+
 @admin.register(ShopSection)
 class ShopSectionAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active', ]

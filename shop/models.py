@@ -98,6 +98,12 @@ class CurrencyPackageItem(BaseModel):
 
 
 class Package(BaseModel):
+    class SupportType(models.TextChoices):
+        NONE = 'none', 'None'
+        PURCHASE = 'purchase', _('Purchase')
+        HONORARY = 'honorary', _('Honorary')
+        REWARD = 'reward', _('Reward')
+
     start_time = models.DateTimeField(verbose_name=_("Start Time"), null=True, blank=True, )
     name = models.CharField(verbose_name=_("Name"), unique=True, max_length=255)
     priority = models.PositiveIntegerField(verbose_name=_("Priority"), help_text=_("1 is More important"))
@@ -107,6 +113,9 @@ class Package(BaseModel):
     currency_items = models.ManyToManyField(to=CurrencyPackageItem, verbose_name=_("Currency Package Items"),
                                             blank=True)
     asset_items = models.ManyToManyField(to=Asset, verbose_name=_("Asset Package Items"), blank=True)
+    support_type = models.CharField(verbose_name=_("Support Type"), choices=SupportType.choices, max_length=100, )
+    vip = models.BooleanField(default=False, verbose_name=_("VIP"))
+    vip_duration = models.DurationField(verbose_name=_("VIP Duration"), null=True, blank=True)
 
     def _has_started(self):
         return self.start_time and self.start_time > timezone.now()
@@ -116,6 +125,10 @@ class Package(BaseModel):
 
     def is_pacakge_available(self):
         return self._has_started() and not self._has_expired()
+
+    @property
+    def has_supported(self):
+        return self.support_type != self.SupportType.NONE
 
     def __str__(self):
         return self.name
@@ -178,7 +191,7 @@ class ShopPackage(Package):
     class Meta:
         verbose_name = _("Shop Package")
         verbose_name_plural = _("Shop Packages")
-        ordering = ('priority', )
+        ordering = ('priority',)
 
 
 class RewardPackage(Package):

@@ -41,7 +41,7 @@ STORAGES = {
         },
     },
     'staticfiles': {
-        'BACKEND': DEFAULT_FILE_STORAGE,
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     }
 }
 
@@ -182,7 +182,7 @@ for d in NEEDED_DIRS:
     if not os.path.isdir(d):
         os.mkdir(d)
 
-STATIC_URL = f'{MINIO_ACCESS_URL}/static/'
+STATIC_URL = f'/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 TEMP_URL = '/temp/'

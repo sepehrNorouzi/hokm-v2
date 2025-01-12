@@ -20,7 +20,7 @@ class PlayerShopInfo(BaseModel):
     player = models.OneToOneField(to=User, on_delete=models.RESTRICT, verbose_name=_("Player"),
                                   related_name="shop_info")
     currencies = models.ManyToManyField(to=PlayerCurrency, verbose_name=_("Player Currencies"), blank=True, )
-    assets = models.ManyToManyField(to=Asset, verbose_name=_("Assets"), blank=True,)
+    assets = models.ManyToManyField(to=Asset, verbose_name=_("Assets"), blank=True, )
 
     def __str__(self):
         return f"{self.player} Shop info"

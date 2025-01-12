@@ -7,11 +7,12 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import QuerySet
 from django.template.loader import render_to_string
-from django.utils import translation
+from django.utils import translation, timezone
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
+from common.models import BaseModel
 from user.choices import Gender
 from user.exceptions import ReVerifyException
 from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
@@ -44,7 +45,6 @@ class User(AbstractUser, PermissionsMixin):
         if self.email:
             return NormalPlayer.objects.get(pk=self.pk)
         return GuestPlayer.objects.get(pk=self.pk)
-
 
 
 class Player(User):
@@ -216,3 +216,64 @@ class NormalPlayer(Player):
             return None, None, 'Invalid credentials.'
 
         return user, user.get_token(), None
+
+
+class SupporterPlayerInfo(BaseModel):
+    player = models.ForeignKey(to='user.User', verbose_name=_("Player"), on_delete=models.CASCADE,
+                               related_name='supports')
+    visible = models.BooleanField(default=False, verbose_name=_("Is visible"))
+    used = models.BooleanField(default=False, verbose_name=_("Is used"))
+    reason = models.CharField(max_length=10, verbose_name=_("Reason"), )
+
+    approved = models.BooleanField(default=False, verbose_name=_("Approved"))
+    approval_date = models.DateTimeField(verbose_name=_("Approval date"), null=True, blank=True)
+
+    # Body
+    message = models.CharField(max_length=100, verbose_name=_("Message"), null=True, blank=True)
+    instagram_link = models.CharField(max_length=255, verbose_name=_("Instagram"), null=True, blank=True)
+    telegram_link = models.CharField(max_length=255, verbose_name=_("Telegram"), null=True, blank=True)
+    rubika_link = models.CharField(max_length=255, verbose_name=_("Rubika"), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Player Support info")
+        verbose_name_plural = _("Player Support info")
+        ordering = ('-created_time',)
+
+    def approve(self):
+        self.approved = True
+        self.approval_date = timezone.now()
+        self.save()
+
+    def disapprove(self):
+        self.approved = False
+        self.approval_date = None
+        self.save()
+
+    def use(self, data: dict):
+        if self.used:
+            return
+        self.used = True
+        self.visible = data.get("visible", False)
+        self.message = data.get('message')
+        self.instagram_link = data.get('instagram_link')
+        self.telegram_link = data.get('telegram_link')
+        self.rubika_link = data.get('rubika_link')
+        self.save()
+
+    def __str__(self):
+        return f'{self.player} - {self.id}'
+
+
+class VipPlayer(BaseModel):
+    player = models.ForeignKey(to='user.User', verbose_name=_("Player"), on_delete=models.CASCADE, related_name='vip')
+    expiration_date = models.DateTimeField(verbose_name=_("Expiration date"), )
+
+    def __str__(self):
+        return f'{self.player.username} VIP info.'
+
+    class Meta:
+        verbose_name = _("VIP player")
+        verbose_name_plural = _("VIP players")
+
+    def is_expired(self):
+        return self.expiration_date > timezone.now()
