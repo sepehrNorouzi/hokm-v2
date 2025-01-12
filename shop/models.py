@@ -3,8 +3,25 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from common.models import BaseModel, SingletonCachableModel
 
-class Currency(models.Model):
+
+class Market(BaseModel):
+    is_active = models.BooleanField(default=True, verbose_name=_('Active'))
+    name = models.CharField(max_length=255, unique=True, verbose_name=_('Name'))
+    last_version = models.IntegerField(verbose_name=_("last version"), default=0)
+    support_version = models.IntegerField(verbose_name=_("support version"), default=0)
+    config = models.JSONField(verbose_name=_("config"), null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Market')
+        verbose_name_plural = _('Markets')
+
+
+class Currency(BaseModel):
     class CurrencyType(models.TextChoices):
         IN_APP = 'in_app', 'In App'
         REAL = 'real', 'Real'
@@ -12,6 +29,8 @@ class Currency(models.Model):
     name = models.CharField(verbose_name=_("Currency Name"), max_length=100, unique=True)
     icon = models.ImageField(upload_to='currencies', null=True, blank=True, verbose_name=_("Currency Icon"))
     config = models.JSONField(null=True, blank=True, verbose_name=_("Currency Config"))
+    type = models.CharField(verbose_name=_("Currency Type"), choices=CurrencyType.choices, max_length=100,
+                            default=CurrencyType.IN_APP)
 
     def __str__(self):
         return self.name
@@ -26,7 +45,7 @@ class Currency(models.Model):
         super(Currency, self).save(*args, **kwargs)
 
 
-class Asset(models.Model):
+class Asset(BaseModel):
     class AssetType(models.TextChoices):
         AVATAR = 'avatar', _('Avatar')
         STICKER = 'sticker', _('Sticker')
@@ -44,7 +63,7 @@ class Asset(models.Model):
         verbose_name_plural = _("Assets")
 
 
-class Cost(models.Model):
+class Cost(BaseModel):
     currency = models.ForeignKey(to=Currency, verbose_name=_("Currency"), on_delete=models.CASCADE)
     amount = models.PositiveIntegerField(verbose_name=_("Amount"), default=0)
 
@@ -57,7 +76,7 @@ class Cost(models.Model):
         unique_together = (("currency", "amount"),)
 
 
-class CurrencyPackageItem(models.Model):
+class CurrencyPackageItem(BaseModel):
     currency = models.ForeignKey(to=Currency, verbose_name=_("Currency"), on_delete=models.CASCADE)
     amount = models.PositiveIntegerField(verbose_name=_("Amount"), default=0)
     config = models.JSONField(null=True, blank=True, verbose_name=_("Config"))
@@ -70,12 +89,16 @@ class CurrencyPackageItem(models.Model):
         verbose_name_plural = _("Currency Package Items")
 
 
-class Package(models.Model):
+class Package(BaseModel):
     start_time = models.DateTimeField(verbose_name=_("Start Time"), null=True, blank=True, )
     name = models.CharField(verbose_name=_("Name"), unique=True, max_length=255)
     priority = models.PositiveIntegerField(verbose_name=_("Priority"), help_text=_("1 is More important"))
     expiration_date = models.DateTimeField(verbose_name=_("Expired time"), null=True, blank=True, )
     image = models.ImageField(upload_to='package', null=True, blank=True, verbose_name=_("Image"))
+    config = models.JSONField(null=True, blank=True, verbose_name=_("Config"))
+    currency_items = models.ManyToManyField(to=CurrencyPackageItem, verbose_name=_("Currency Package Items"),
+                                            blank=True)
+    asset_items = models.ManyToManyField(to=Asset, verbose_name=_("Asset Package Items"), blank=True)
 
     def _has_started(self):
         return self.start_time and self.start_time > timezone.now()
@@ -95,6 +118,22 @@ class Package(models.Model):
         abstract = True
 
 
+class ShopSection(BaseModel):
+    name = models.CharField(verbose_name=_("Name"), max_length=255, unique=True)
+    config = models.JSONField(null=True, blank=True, verbose_name=_("Config"))
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def packages(self):
+        return self.packages.filter(is_active=True)
+
+    class Meta:
+        verbose_name = _("Shop Section")
+        verbose_name_plural = _("Shop Sections")
+
+
 class ShopPackage(Package):
     price_currency = models.ForeignKey(to=Currency, verbose_name=_("Price"), on_delete=models.CASCADE)
     price_amount = models.PositiveIntegerField(verbose_name=_("Price Amount"), default=0)
@@ -102,6 +141,55 @@ class ShopPackage(Package):
                                  validators=[MinValueValidator(0), MaxValueValidator(1)])
     discount_start = models.DateTimeField(verbose_name=_("Discount Start Time"), null=True, blank=True, )
     discount_end = models.DateTimeField(verbose_name=_("Discount End Time"), null=True, blank=True, )
+    shop_section = models.ForeignKey(to=ShopSection, verbose_name=_("Shop Section"), on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name='packages')
+    sku = models.CharField(verbose_name=_("SKU"), max_length=100, unique=True)
+    markets = models.ManyToManyField(to=Market, verbose_name=_("Markets"), blank=True,
+                                     related_name='shop_packages')
+
+    def _is_in_discount_period(self) -> bool:
+        has_discount_values = self.discount_start and self.discount_end
+        if has_discount_values:
+            is_in_period = self.discount_end > timezone.now() and self.discount_start > timezone.now()
+            return is_in_period
+        return False
 
     def is_in_discount(self):
-        pass
+        return self._is_in_discount_period()
+
+    @property
+    def final_price(self):
+        if self.is_in_discount():
+            return self.price_amount * (1 - self.discount)
+        return self.price_amount
+
+    @property
+    def is_in_app_purchase(self):
+        return self.price_currency.type == Currency.CurrencyType.IN_APP
+
+    class Meta:
+        verbose_name = _("Shop Package")
+        verbose_name_plural = _("Shop Packages")
+
+
+class RewardPackage(Package):
+    class RewardType(models.TextChoices):
+        INIT_WALLET = 'initial_wallet', _('Initial Wallet')
+
+    reward_type = models.CharField(verbose_name=_("Reward Type"), choices=RewardType.choices, max_length=50)
+
+    class Meta:
+        verbose_name = _("Reward Package")
+        verbose_name_plural = _("Reward Packages")
+
+
+class ShopConfiguration(SingletonCachableModel):
+    player_initial_package = models.ForeignKey(to=RewardPackage, verbose_name=_("Player Initial Package"),
+                                               on_delete=models.RESTRICT, )
+
+    def __str__(self):
+        return 'Shop Configuration'
+
+    class Meta:
+        verbose_name = _("Shop Configuration")
+        verbose_name_plural = _("Shop Configurations")
