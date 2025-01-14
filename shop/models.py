@@ -1,3 +1,5 @@
+import math
+
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
@@ -113,7 +115,8 @@ class Package(BaseModel):
     currency_items = models.ManyToManyField(to=CurrencyPackageItem, verbose_name=_("Currency Package Items"),
                                             blank=True)
     asset_items = models.ManyToManyField(to=Asset, verbose_name=_("Asset Package Items"), blank=True)
-    support_type = models.CharField(verbose_name=_("Support Type"), choices=SupportType.choices, max_length=100, )
+    support_type = models.CharField(verbose_name=_("Support Type"), choices=SupportType.choices, max_length=100,
+                                    default=SupportType.NONE)
     vip = models.BooleanField(default=False, verbose_name=_("VIP"))
     vip_duration = models.DurationField(verbose_name=_("VIP Duration"), null=True, blank=True)
 
@@ -179,9 +182,9 @@ class ShopPackage(Package):
         return self._is_in_discount_period()
 
     @property
-    def final_price(self):
+    def final_price(self) -> int:
         if self.is_in_discount():
-            return self.price_amount * (1 - self.discount)
+            return math.ceil(self.price_amount * (1 - self.discount))
         return self.price_amount
 
     @property

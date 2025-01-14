@@ -1,45 +1,111 @@
+from typing import Union
+
 from django.db import models
+from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
-from shop.models import Currency, Asset, Market
+from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
+from shop.models import Currency, Asset, Market, ShopPackage
 from user.models import Player, User
 
 
-class PlayerCurrency(BaseModel):
-    currency = models.ForeignKey(to=Currency, on_delete=models.CASCADE, verbose_name=_("Currency"))
-    amount = models.PositiveIntegerField(default=0, verbose_name=_("Amount"))
-
-    def __str__(self):
-        return f"{self.amount} X {self.currency}"
-
-
-class PlayerShopInfo(BaseModel):
+class PlayerWallet(BaseModel):
     player_market = models.ForeignKey(to=Market, on_delete=models.SET_NULL, verbose_name=_("Market"), null=True,
                                       blank=True)
     player = models.OneToOneField(to=User, on_delete=models.RESTRICT, verbose_name=_("Player"),
                                   related_name="shop_info")
-    currencies = models.ManyToManyField(to=PlayerCurrency, verbose_name=_("Player Currencies"), blank=True, )
-    assets = models.ManyToManyField(to=Asset, verbose_name=_("Assets"), blank=True, )
 
     def __str__(self):
         return f"{self.player} Shop info"
 
     class Meta:
-        verbose_name = _("Player Shop Info")
-        verbose_name_plural = _("Players Shop Info")
+        verbose_name = _("Player Wallet")
+        verbose_name_plural = _("Players Wallets")
 
-    def get_player_currency(self, currency: Currency) -> PlayerCurrency:
-        return self.currencies.filter(currency=currency).first()
+    def get_or_create_currency(self, currency: Currency) -> 'CurrencyBalance':
+        return self.currency_balances.get_or_create(currency=currency)[0]
+
+    def get_player_currency(self, currency: Currency) -> Union['CurrencyBalance', None]:
+        return self.currency_balances.filter(currency=currency).first()
 
     def has_enough_credit(self, currency: Currency, amount: int) -> bool:
         if not isinstance(currency, Currency):
             raise ValueError(f"{currency} must be of type Currency")
-        player_currency: PlayerCurrency = self.get_player_currency(currency)
-        return player_currency.amount >= amount
+        player_currency: CurrencyBalance = self.get_player_currency(currency)
+        return player_currency and player_currency.balance >= amount
 
-    def get_player_asset(self, asset: Asset) -> bool:
-        return self.assets.filter(asset=asset).first()
+    def get_player_asset(self, asset: Asset) -> Asset:
+        return self.asset_ownerships.filter(id=asset.id).first()
+
+    def buy_package(self, package: ShopPackage):
+        if package.price_currency.type == package.price_currency.CurrencyType.REAL:
+            raise WrongShopFlowError(_(f"{package.name} must be bought through market verification."))
+
+        if not self.has_enough_credit(package.price_currency, package.final_price):
+            raise NotEnoughCreditError(_(f"Player does not have enough {package.price_currency} for {package.name}."))
+
+        self.add_shop_package(package, description="buying.")
+
+    def pay(self, currency: Currency, amount: int, description: str = None):
+        player_currency = self.get_player_currency(currency)
+        player_currency.balance -= amount
+        player_currency.save()
+        PlayerWalletLog.objects.create(player=self.player, description=description,
+                                       transaction_type=PlayerWalletLog.TransactionType.SPEND,
+                                       currency=currency, amount=amount)
+
+    @atomic()
+    def add_shop_package(self, package: ShopPackage, description=None):
+        player_wallet_log_objects = []
+        for item in package.currency_items.all():
+            player_currency = self.get_or_create_currency(item.currency)
+            player_currency.balance += item.amount
+            description = f"{self.player} earned {item.amount} X {item.currency} from {description}"
+            player_wallet_log_objects.append(PlayerWalletLog(player=self.player, description=description,
+                                                             transaction_type=PlayerWalletLog.TransactionType.EARN,
+                                                             currency=item.currency, amount=item.amount), )
+            player_currency.save()
+        assets = []
+        for item in package.asset_items.all():
+            player_asset = self.get_player_asset(asset=item)
+            if player_asset:
+                continue
+            assets.append(AssetOwnership(wallet_id=self.id, asset=item))
+            description = f"{self.player} earned {item} from {description}"
+            player_wallet_log_objects.append(PlayerWalletLog(player=self.player, description=description,
+                                                             transaction_type=PlayerWalletLog.TransactionType.EARN,
+                                                             asset=item))
+        self.pay(package.price_currency, package.price_amount, f"Bought {package.name}")
+        self.asset_ownerships.bulk_create(assets)
+        PlayerWalletLog.objects.bulk_create(player_wallet_log_objects)
+
+
+class CurrencyBalance(models.Model):
+    wallet = models.ForeignKey(PlayerWallet, on_delete=models.CASCADE, related_name='currency_balances')
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
+    balance = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('wallet', 'currency')
+        verbose_name = _("Currency Balance")
+        verbose_name_plural = _("Currency Balance")
+
+    def __str__(self):
+        return f"{self.balance} {self.currency.name} in {self.wallet}"
+
+
+class AssetOwnership(models.Model):
+    wallet = models.ForeignKey(PlayerWallet, on_delete=models.CASCADE, related_name='asset_ownerships')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, verbose_name=_("Asset"))
+
+    class Meta:
+        unique_together = ('wallet', 'asset')
+        verbose_name = _("Asset Ownership")
+        verbose_name_plural = _("Asset Ownerships")
+
+    def __str__(self):
+        return f"{self.asset.name} owned by {self.wallet.player.username}"
 
 
 class PlayerWalletLog(BaseModel):
