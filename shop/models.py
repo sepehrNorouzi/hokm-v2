@@ -174,7 +174,7 @@ class ShopPackage(Package):
     def _is_in_discount_period(self) -> bool:
         has_discount_values = self.discount_start and self.discount_end
         if has_discount_values:
-            is_in_period = self.discount_end > timezone.now() and self.discount_start > timezone.now()
+            is_in_period = self.discount_end > timezone.now() > self.discount_start
             return is_in_period
         return False
 

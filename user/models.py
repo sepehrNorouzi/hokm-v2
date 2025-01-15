@@ -376,7 +376,7 @@ class SupporterPlayerInfo(BaseModel):
 
 class VipPlayer(BaseModel):
     player = models.ForeignKey(to='user.User', verbose_name=_("Player"), on_delete=models.CASCADE, related_name='vip')
-    expiration_date = models.DateTimeField(verbose_name=_("Expiration date"), )
+    expiration_date = models.DateTimeField(verbose_name=_("Expiration date"), null=True, blank=True)
 
     def __str__(self):
         return f'{self.player.username} VIP info.'
@@ -386,4 +386,4 @@ class VipPlayer(BaseModel):
         verbose_name_plural = _("VIP players")
 
     def is_expired(self):
-        return self.expiration_date > timezone.now()
+        return self.expiration_date and self.expiration_date < timezone.now()

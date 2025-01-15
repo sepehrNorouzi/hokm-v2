@@ -4,11 +4,12 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.db.transaction import atomic
 from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
-from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage
+from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage, Package
 from user.models import Player, User, NormalPlayer, GuestPlayer
 
 
@@ -38,7 +39,7 @@ class PlayerWallet(BaseModel):
         return player_currency and player_currency.balance >= amount
 
     def get_player_asset(self, asset: Asset) -> Asset:
-        return self.asset_ownerships.filter(id=asset.id).first()
+        return self.asset_ownerships.filter(asset=asset).first()
 
     def buy_package(self, package: ShopPackage):
         if package.price_currency.type == package.price_currency.CurrencyType.REAL:
@@ -57,7 +58,7 @@ class PlayerWallet(BaseModel):
                                        transaction_type=PlayerWalletLog.TransactionType.SPEND,
                                        currency=currency, amount=amount)
 
-    def _add_package_base(self, package, description):
+    def _add_package_base(self, package: Package, description):
         player_wallet_log_objects = []
         for item in package.currency_items.all():
             player_currency = self.get_or_create_currency(item.currency)
@@ -79,6 +80,15 @@ class PlayerWallet(BaseModel):
                                                              asset=item))
         self.asset_ownerships.bulk_create(assets)
         PlayerWalletLog.objects.bulk_create(player_wallet_log_objects)
+        if package.has_supported:
+            self.player.supports.create(reason=package.support_type)
+        if package.vip:
+            player_vip, c = self.player.vip.get_or_create()
+            if c or player_vip.is_expired():
+                player_vip.expiration_date = timezone.now() + package.vip_duration
+            else:
+                player_vip.expiration_date = player_vip.expiration_date + package.vip_duration
+            player_vip.save()
 
     @atomic()
     def add_shop_package(self, package: ShopPackage, description=None):
