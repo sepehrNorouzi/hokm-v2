@@ -13,9 +13,10 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from common.models import BaseModel
+from exceptions.user import ReVerifyException
 from user.choices import Gender
-from user.exceptions import ReVerifyException
 from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
+from utils.cryptography import encrypt_string, decrypt_string
 
 
 class User(AbstractUser, PermissionsMixin):
@@ -153,18 +154,23 @@ class NormalPlayer(Player):
     def __str__(self):
         return self.email or ""
 
+    def _construct_otp(self):
+        otp_expt = settings.CACHE_EXPT['otp']
+        otp = ''.join([str(random.randint(0, 9)) for __ in range(6)])
+        cache.set(f"{self.id}_EMAIL_VERIFY_OTP", otp, otp_expt)
+        return otp
+
+    def _get_otp(self):
+        return cache.get(f"{self.id}_EMAIL_VERIFY_OTP")
+
     def send_email_verification(self):
         if self.is_verified:
             raise ReVerifyException(message=_("Player is already verified."), )
 
-        otp = ''.join([str(random.randint(0, 9)) for __ in range(6)])
-
-        # Save the OTP to the user model (assuming you have a field for OTP)
-        cache.set(f"{self.id}_EMAIL_VERIFY_OTP", otp, )
+        otp = self._construct_otp()
 
         subject = _(f"{settings.PROJECT_NAME} email verification.")
 
-        # Create the HTML message
         html_message = render_to_string('email_verification.html', {
             'user': self,
             'otp': otp,
@@ -172,16 +178,68 @@ class NormalPlayer(Player):
             'LANGUAGE_CODE': translation.get_language()
         })
 
-        # Create a plain text version of the message
         plain_message = strip_tags(html_message)
 
-        # Send the email
         self.email_user(
             subject=subject,
             message=plain_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             html_message=html_message,
         )
+
+    def resend_email_verification(self) -> bool:
+        last_otp = self._get_otp
+        if last_otp:
+            return False
+        self.send_email_verification()
+        return True
+
+    def _forget_password_attempt(self) -> tuple:
+        previous_password_forget = cache.get(f"{self.id}_FORGET_PASSWORD_TOKEN")
+        if previous_password_forget:
+            return False, ''
+        otp_expt = settings.CACHE_EXPT['otp']
+        forget_password_token = f'{self.email}{timezone.now().timestamp()}'
+        forget_password_token_encrypt = encrypt_string(forget_password_token)
+        cache.set(f"{self.id}_FORGET_PASSWORD_TOKEN", forget_password_token, otp_expt)
+        return True, forget_password_token_encrypt
+
+    def forget_password(self, deep_link: str = ''):
+        success, token = self._forget_password_attempt()
+        if not success:
+            return False
+        reset_link = deep_link.format(token=token)
+        html_message = render_to_string('password_reset.html', {
+            'user': self,
+            'reset_link': reset_link,
+            'project_name': settings.PROJECT_NAME,
+            'LANGUAGE_CODE': translation.get_language(),
+        })
+
+        plain_message = strip_tags(html_message)
+
+        self.email_user(
+            subject=_("Password Reset Request"),
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            html_message=html_message,
+        )
+        return True
+
+    @classmethod
+    def reset_password(cls,email: str, token: str, new_password: str) -> bool:
+        player: QuerySet = cls.objects.filter(email=email)
+        if not player.exists():
+            raise cls.DoesNotExist
+        player: NormalPlayer = player.first()
+        forget_password_token = cache.get(f"{player.id}_FORGET_PASSWORD_TOKEN")
+        token_decrypt = decrypt_string(token)
+        if token_decrypt == forget_password_token:
+            player.set_password(new_password)
+            player.save()
+            return True
+        cache.delete(f"{player.id}_FORGET_PASSWORD_TOKEN")
+        return False
 
     def verify_email(self, otp: str) -> bool:
         if self.is_verified:
@@ -216,6 +274,14 @@ class NormalPlayer(Player):
             return None, None, 'Invalid credentials.'
 
         return user, user.get_token(), None
+
+    @classmethod
+    def attempt_password_recovery(cls, email: str, deep_link: str):
+        player: QuerySet = cls.objects.filter(email=email)
+        if not player.exists():
+            raise cls.DoesNotExist
+        player: NormalPlayer = player.first()
+        return player.forget_password(deep_link=deep_link)
 
 
 class SupporterPlayerInfo(BaseModel):

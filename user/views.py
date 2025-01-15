@@ -7,7 +7,8 @@ from rest_framework.response import Response
 
 from user.models import User, NormalPlayer, GuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
-    GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer
+    GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer, \
+    NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer
 from utils.random_functions import generate_random_string
 
 
@@ -54,6 +55,36 @@ class UserAuthView(viewsets.GenericViewSet):
             return Response(data={'error': errors}, status=status.HTTP_400_BAD_REQUEST)
         return Response(data={'credentials': token, 'user': self.serializer_class(user).data},
                         status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False, url_path="player/recovery/request", url_name="player-recovery-request",
+            serializer_class=NormalPlayerForgetPasswordRequestSerializer)
+    def player_forget_password_request(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        deep_link = data['deep_link']
+        email = data["email"]
+        try:
+            success = NormalPlayer.attempt_password_recovery(email=email, deep_link=deep_link)
+        except NormalPlayer.DoesNotExist:
+            return Response(data={"error": _("No player with this email is found.")}, status=status.HTTP_404_NOT_FOUND)
+        if not success:
+            return Response(data={'error': _("Cool down is not over.")}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        return Response(data={'message': _('Password reset link is sent.')}, status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False, url_path="player/recovery/verify", url_name="player-recovery-verify",
+            serializer_class=NormalPlayerResetPasswordSerializer)
+    def player_reset_password_verify(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        token = data['token']
+        new_password = data['new_password']
+        email = data['email']
+        success = NormalPlayer.reset_password(email=email, token=token, new_password=new_password)
+        if not success:
+            return Response(data={'error': _('Invalid token.')}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={'message': _("Password reset successfully.")}, status=status.HTTP_200_OK)
 
     @action(methods=['POST'], detail=False, url_path="guest/signup", url_name="guest-signup",
             serializer_class=GuestPlayerSignUpSerializer)

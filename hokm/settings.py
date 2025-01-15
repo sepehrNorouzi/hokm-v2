@@ -125,6 +125,10 @@ CACHES = {
     }
 }
 
+CACHE_EXPT = {
+    "otp": int(os.environ.get("OTP_EXPIRATION_TIME", "120"))
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

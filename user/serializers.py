@@ -47,6 +47,17 @@ class NormalPlayerSignInSerializer(serializers.ModelSerializer):
         fields = ['email', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password', ]
 
 
+class NormalPlayerForgetPasswordRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    deep_link = serializers.CharField(default='')
+
+
+class NormalPlayerResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    new_password = serializers.CharField(required=True)
+    token = serializers.CharField(required=True)
+
+
 class GuestPlayerSignUpSerializer(serializers.ModelSerializer):
     device_id = serializers.CharField(required=True)
     credentials = serializers.SerializerMethodField()
