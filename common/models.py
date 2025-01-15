@@ -39,7 +39,7 @@ class SingletonCachableModel(SingletonModel):
 
     @classmethod
     def load(cls):
-        obj = pickle.load(cache.get(cls.get_cache_key()))
+        obj = pickle.loads(cache.get(cls.get_cache_key()))
 
         if not obj:
             obj = cls.objects.first()

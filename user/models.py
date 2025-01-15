@@ -17,6 +17,7 @@ from exceptions.user import ReVerifyException
 from user.choices import Gender
 from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
 from utils.cryptography import encrypt_string, decrypt_string
+from utils.random_functions import generate_random_string
 
 
 class User(AbstractUser, PermissionsMixin):
@@ -138,6 +139,11 @@ class GuestPlayer(Player):
         user.save()
         return user, user.get_token(), None
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.profile_name = f'guest-{generate_random_string(length=10)}'
+        super(GuestPlayer, self).save(*args, **kwargs)
+
 
 class NormalPlayer(Player):
     is_verified = models.BooleanField(default=False, verbose_name=_("Is verified"))
@@ -150,6 +156,7 @@ class NormalPlayer(Player):
 
     def change_profile_name(self, new_profile_name: str):
         self.profile_name = new_profile_name
+        self.save()
 
     def __str__(self):
         return self.email or ""
@@ -227,7 +234,7 @@ class NormalPlayer(Player):
         return True
 
     @classmethod
-    def reset_password(cls,email: str, token: str, new_password: str) -> bool:
+    def reset_password(cls, email: str, token: str, new_password: str) -> bool:
         player: QuerySet = cls.objects.filter(email=email)
         if not player.exists():
             raise cls.DoesNotExist
@@ -245,7 +252,6 @@ class NormalPlayer(Player):
         if self.is_verified:
             return True
         cached_otp = cache.get(f"{self.id}_EMAIL_VERIFY_OTP")
-
         if cached_otp:
             cache.delete(f"{self.id}_EMAIL_VERIFY_OTP")
             if cached_otp == otp:

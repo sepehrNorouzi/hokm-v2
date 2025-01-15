@@ -44,7 +44,7 @@ class NormalPlayerAuthView(viewsets.GenericViewSet):
                             status=status.HTTP_200_OK)
         return Response(data={'error': _('Invalid OTP.')}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
-    @action(methods=['POST'], detail=False, url_path="player/login", url_name="login",
+    @action(methods=['POST'], detail=False, url_path="login", url_name="login",
             serializer_class=NormalPlayerSignInSerializer)
     def player_signin(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)

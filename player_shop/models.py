@@ -1,13 +1,15 @@
 from typing import Union
 
 from django.db import models
+from django.db.models.signals import post_save
 from django.db.transaction import atomic
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
-from shop.models import Currency, Asset, Market, ShopPackage
-from user.models import Player, User
+from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage
+from user.models import Player, User, NormalPlayer, GuestPlayer
 
 
 class PlayerWallet(BaseModel):
@@ -55,8 +57,7 @@ class PlayerWallet(BaseModel):
                                        transaction_type=PlayerWalletLog.TransactionType.SPEND,
                                        currency=currency, amount=amount)
 
-    @atomic()
-    def add_shop_package(self, package: ShopPackage, description=None):
+    def _add_package_base(self, package, description):
         player_wallet_log_objects = []
         for item in package.currency_items.all():
             player_currency = self.get_or_create_currency(item.currency)
@@ -76,9 +77,23 @@ class PlayerWallet(BaseModel):
             player_wallet_log_objects.append(PlayerWalletLog(player=self.player, description=description,
                                                              transaction_type=PlayerWalletLog.TransactionType.EARN,
                                                              asset=item))
-        self.pay(package.price_currency, package.price_amount, f"Bought {package.name}")
         self.asset_ownerships.bulk_create(assets)
         PlayerWalletLog.objects.bulk_create(player_wallet_log_objects)
+
+    @atomic()
+    def add_shop_package(self, package: ShopPackage, description=None):
+        self._add_package_base(package, description)
+        self.pay(package.price_currency, package.price_amount, f"Bought {package.name}")
+
+    @atomic()
+    def add_reward_pacakge(self, package, description=None):
+        self._add_package_base(package, description)
+
+    @classmethod
+    def initialize(cls, player):
+        wallet = cls.objects.create(player=User.objects.get(pk=player.pk))
+        init_package: RewardPackage = ShopConfiguration.load().player_initial_package
+        wallet.add_reward_pacakge(init_package, "Initiation.")
 
 
 class CurrencyBalance(models.Model):
@@ -129,3 +144,15 @@ class PlayerWalletLog(BaseModel):
     class Meta:
         verbose_name = _("Player Wallet Log")
         verbose_name_plural = _("Player Wallet Logs")
+
+
+@receiver(signal=post_save, sender=NormalPlayer)
+def normal_player_post_save_signal(sender, instance, created, **kwargs):
+    if created:
+        PlayerWallet.initialize(instance)
+
+
+@receiver(signal=post_save, sender=GuestPlayer)
+def guest_post_save_signal(sender, instance, created, **kwargs):
+    if created:
+        PlayerWallet.initialize(instance)
