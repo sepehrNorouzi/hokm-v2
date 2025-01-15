@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from user.models import NormalPlayer, GuestPlayer
+from user.permissions import IsGuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
     GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer, \
     NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer
@@ -131,6 +132,15 @@ class GuestPlayerAuthView(viewsets.GenericViewSet):
         return Response(data={'credentials': token, 'user': {**self.serializer_class(user).data, 'password': password}},
                         status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path='convert', url_name='convert')
+    @action(methods=['POST'], detail=False, url_path='convert', url_name='convert', permission_classes=[IsGuestPlayer])
     def guest_convert(self, request, *args, **kwargs):
-        pass
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exceptions=True)
+        data = serializer.validated_data
+        player: GuestPlayer = self.request.user.player
+        email = data['email']
+        password = data['password']
+        profile_name = data.get("profile_name")
+        normal_player: NormalPlayer = player.convert_to_normal_player(email=email, password=password,
+                                                                      profile_name=profile_name)
+        return Response(data=NormalPlayerSignUpSerializer(normal_player).data, status=status.HTTP_201_CREATED)
