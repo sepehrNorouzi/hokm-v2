@@ -91,7 +91,9 @@ class PlayerWallet(BaseModel):
 
     @classmethod
     def initialize(cls, player):
-        wallet = cls.objects.create(player=User.objects.get(pk=player.pk))
+        wallet, c = cls.objects.get_or_create(player=User.objects.get(pk=player.pk))
+        if not c:
+            return
         init_package: RewardPackage = ShopConfiguration.load().player_initial_package
         wallet.add_reward_pacakge(init_package, "Initiation.")
 

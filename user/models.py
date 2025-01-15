@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import QuerySet
+from django.db.transaction import atomic
 from django.template.loader import render_to_string
 from django.utils import translation, timezone
 from django.utils.html import strip_tags
@@ -143,6 +144,32 @@ class GuestPlayer(Player):
         if not self.pk:
             self.profile_name = f'guest-{generate_random_string(length=10)}'
         super(GuestPlayer, self).save(*args, **kwargs)
+
+    @atomic()
+    def convert_to_normal_player(self, email: str, password: str, profile_name: str = None):
+        user = self.user_ptr
+        device_id = self.device_id
+        normal_player = NormalPlayer(
+            user_ptr=user,
+            profile_name=profile_name or self.profile_name,
+            gender=self.gender,
+            birth_date=self.birth_date,
+            is_blocked=self.is_blocked,
+            score=self.score,
+            xp=self.xp,
+            cup=self.cup,
+            email=email,
+            is_verified=False,
+            username=email,
+            device_id=None
+        )
+
+        self.delete(keep_parents=True)
+        normal_player.set_password(password)
+        normal_player.save()
+        normal_player.send_email_verification()
+        DeviceIdBlackList.objects.create(device_id=device_id)
+        return normal_player
 
 
 class NormalPlayer(Player):
@@ -291,6 +318,14 @@ class NormalPlayer(Player):
             raise cls.DoesNotExist
         player: NormalPlayer = player.first()
         return player.forget_password(deep_link=deep_link)
+
+
+class DeviceIdBlackList(BaseModel):
+    device_id = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Device Id Black list")
+        verbose_name_plural = _("Device Id Black list")
 
 
 class SupporterPlayerInfo(BaseModel):

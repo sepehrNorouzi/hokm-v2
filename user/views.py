@@ -130,3 +130,7 @@ class GuestPlayerAuthView(viewsets.GenericViewSet):
             return Response(data={'error': errors}, status=status.HTTP_400_BAD_REQUEST)
         return Response(data={'credentials': token, 'user': {**self.serializer_class(user).data, 'password': password}},
                         status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], detail=False, url_path='convert', url_name='convert')
+    def guest_convert(self, request, *args, **kwargs):
+        pass
