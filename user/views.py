@@ -5,17 +5,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from user.models import User, NormalPlayer, GuestPlayer
+from user.models import NormalPlayer, GuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
     GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer, \
     NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer
 from utils.random_functions import generate_random_string
 
 
-class UserAuthView(viewsets.GenericViewSet):
-    queryset = User.objects.filter(is_active=True)
+class NormalPlayerAuthView(viewsets.GenericViewSet):
+    queryset = NormalPlayer.objects.filter(is_active=True)
 
-    @action(methods=['POST'], detail=False, url_path="player/signup", url_name="player-signup",
+    @action(methods=['POST'], detail=False, url_path="signup", url_name="signup",
             serializer_class=NormalPlayerSignUpSerializer)
     def player_signup(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -28,7 +28,7 @@ class UserAuthView(viewsets.GenericViewSet):
         return Response(data={"message": _(f"OTP is sent to {user.email}."), "user": self.serializer_class(user).data},
                         status=status.HTTP_201_CREATED)
 
-    @action(methods=['POST'], detail=False, url_path="player/signup/verify", url_name="player-signup-verify",
+    @action(methods=['POST'], detail=False, url_path="signup/verify", url_name="signup-verify",
             serializer_class=NormalPlayerVerifySerializer)
     def player_email_verify(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -44,7 +44,7 @@ class UserAuthView(viewsets.GenericViewSet):
                             status=status.HTTP_200_OK)
         return Response(data={'error': _('Invalid OTP.')}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
-    @action(methods=['POST'], detail=False, url_path="player/login", url_name="player-login",
+    @action(methods=['POST'], detail=False, url_path="player/login", url_name="login",
             serializer_class=NormalPlayerSignInSerializer)
     def player_signin(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -56,7 +56,7 @@ class UserAuthView(viewsets.GenericViewSet):
         return Response(data={'credentials': token, 'user': self.serializer_class(user).data},
                         status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="player/recovery/request", url_name="player-recovery-request",
+    @action(methods=['POST'], detail=False, url_path="recovery/request", url_name="recovery-request",
             serializer_class=NormalPlayerForgetPasswordRequestSerializer)
     def player_forget_password_request(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -72,7 +72,7 @@ class UserAuthView(viewsets.GenericViewSet):
             return Response(data={'error': _("Cool down is not over.")}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         return Response(data={'message': _('Password reset link is sent.')}, status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="player/recovery/verify", url_name="player-recovery-verify",
+    @action(methods=['POST'], detail=False, url_path="recovery/verify", url_name="recovery-verify",
             serializer_class=NormalPlayerResetPasswordSerializer)
     def player_reset_password_verify(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -86,7 +86,11 @@ class UserAuthView(viewsets.GenericViewSet):
             return Response(data={'error': _('Invalid token.')}, status=status.HTTP_400_BAD_REQUEST)
         return Response(data={'message': _("Password reset successfully.")}, status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="guest/signup", url_name="guest-signup",
+
+class GuestPlayerAuthView(viewsets.GenericViewSet):
+    queryset = GuestPlayer.objects.filter(is_active=True)
+
+    @action(methods=['POST'], detail=False, url_path="signup", url_name="signup",
             serializer_class=GuestPlayerSignUpSerializer)
     def guest_signup(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -99,7 +103,7 @@ class UserAuthView(viewsets.GenericViewSet):
         data = {**self.serializer_class(user).data, "password": password}
         return Response(data=data, status=status.HTTP_201_CREATED)
 
-    @action(methods=['POST'], detail=False, url_path="guest/login", url_name="guest-login",
+    @action(methods=['POST'], detail=False, url_path="login", url_name="login",
             serializer_class=GuestPlayerSignInSerializer)
     def guest_signin(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -111,7 +115,7 @@ class UserAuthView(viewsets.GenericViewSet):
         return Response(data={'credentials': token, 'user': self.serializer_class(user).data},
                         status=status.HTTP_200_OK)
 
-    @action(methods=['POST'], detail=False, url_path="guest/recovery", url_name="guest-recovery",
+    @action(methods=['POST'], detail=False, url_path="recovery", url_name="recovery",
             serializer_class=GuestPlayerRecoverySerializer)
     def guest_recovery(self, request, *args, **kwargs):
         # Will change

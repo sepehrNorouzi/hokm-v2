@@ -268,6 +268,9 @@ class NormalPlayer(Player):
 
         user: NormalPlayer = user.first()
 
+        if not user.is_verified:
+            return None, None, 'User is not verified.'
+
         is_correct = user.check_password(raw_password=password)
 
         if not is_correct:

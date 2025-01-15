@@ -1,8 +1,7 @@
-from django.urls import path
-from user.views import UserAuthView
+from user.views import NormalPlayerAuthView, GuestPlayerAuthView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 
-router.register('user/auth', UserAuthView, basename='auth')
-
+router.register('user/auth/player', NormalPlayerAuthView, basename='auth-player')
+router.register('user/auth/player', GuestPlayerAuthView, basename='auth-guest')
