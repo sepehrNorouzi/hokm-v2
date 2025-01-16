@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from user.models import NormalPlayer, GuestPlayer, VipPlayer
+from user.models import NormalPlayer, GuestPlayer, VipPlayer, SupporterPlayerInfo
 
 
 class NormalPlayerSignUpSerializer(serializers.ModelSerializer):
@@ -127,3 +127,25 @@ class PlayerProfileSerializer(serializers.Serializer):
         if vip:
             return not vip.is_expired()
         return False
+
+
+class SupporterPlayerSerializer(serializers.ModelSerializer):
+    player = PlayerProfileSerializer()
+
+    class Meta:
+        model = SupporterPlayerInfo
+        exclude = ['created_time', 'is_active', 'updated_time']
+
+
+class SupporterRetrieveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupporterPlayerInfo
+        fields = ['reason', 'message', 'instagram_link', 'telegram_link', 'rubika_link', 'id']
+
+
+class SupporterPanelUseSerializer(serializers.Serializer):
+    message = serializers.CharField(required=False)
+    instagram_link = serializers.CharField(required=False)
+    telegram_link = serializers.CharField(required=False)
+    website_link = serializers.CharField(required=False)
+    visible = serializers.BooleanField(default=False)
