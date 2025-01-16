@@ -168,7 +168,6 @@ class GuestPlayer(Player):
         normal_player.set_password(password)
         normal_player.save()
         normal_player.send_email_verification()
-        DeviceIdBlackList.objects.create(device_id=device_id)
         return normal_player
 
 
@@ -318,14 +317,6 @@ class NormalPlayer(Player):
             raise cls.DoesNotExist
         player: NormalPlayer = player.first()
         return player.forget_password(deep_link=deep_link)
-
-
-class DeviceIdBlackList(BaseModel):
-    device_id = models.CharField(max_length=255, null=True, blank=True)
-
-    class Meta:
-        verbose_name = _("Device Id Black list")
-        verbose_name_plural = _("Device Id Black list")
 
 
 class SupporterPlayerInfo(BaseModel):

@@ -1,15 +1,17 @@
 from django.db import IntegrityError
 from django.db.models import QuerySet
+from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from user.models import NormalPlayer, GuestPlayer
+from user.models import NormalPlayer, GuestPlayer, User
 from user.permissions import IsGuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
     GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer, \
-    NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer
+    NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer, PlayerProfileSerializer
 from utils.random_functions import generate_random_string
 
 
@@ -144,3 +146,19 @@ class GuestPlayerAuthView(viewsets.GenericViewSet):
         normal_player: NormalPlayer = player.convert_to_normal_player(email=email, password=password,
                                                                       profile_name=profile_name)
         return Response(data=NormalPlayerSignUpSerializer(normal_player).data, status=status.HTTP_201_CREATED)
+
+
+class PlayerProfileView(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
+    queryset = User.objects.filter(is_active=True)
+    permission_classes = [IsAuthenticated, ]
+    serializer_class = PlayerProfileSerializer
+
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        user = get_object_or_404(User, pk=self.kwargs[lookup_url_kwarg])
+        return user.player
+
+    def list(self, request, *args, **kwargs):
+        player = self.request.user.player
+        serializer = self.serializer_class(player)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)

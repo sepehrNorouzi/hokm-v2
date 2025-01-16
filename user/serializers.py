@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from user.models import NormalPlayer, GuestPlayer
+from user.models import NormalPlayer, GuestPlayer, VipPlayer
 
 
 class NormalPlayerSignUpSerializer(serializers.ModelSerializer):
@@ -38,13 +38,27 @@ class NormalPlayerVerifySerializer(serializers.ModelSerializer):
         return obj.get_token()
 
 
+class VipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VipPlayer
+        fields = ['expiration_date', 'id']
+
+
 class NormalPlayerSignInSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=True)
+    vip = serializers.SerializerMethodField()
 
     class Meta:
         model = NormalPlayer
-        fields = ['email', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password', ]
+        fields = ['email', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name', 'password', 'vip', ]
+
+    @staticmethod
+    def get_vip(obj: NormalPlayer):
+        vip = obj.vip.first()
+        if vip and not vip.is_expired():
+            return VipSerializer(vip).data
+        return None
 
 
 class NormalPlayerForgetPasswordRequestSerializer(serializers.Serializer):
@@ -98,3 +112,18 @@ class GuestPlayerRecoverySerializer(serializers.ModelSerializer):
         model = GuestPlayer
         fields = ['device_id', 'profile_name', 'gender', 'birth_date', 'first_name', 'last_name',
                   'recovery_string', 'password', ]
+
+
+class PlayerProfileSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    profile_name = serializers.CharField(read_only=True)
+    gender = serializers.CharField(read_only=True)
+    birth_date = serializers.DateField(read_only=True)
+    vip = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_vip(obj):
+        vip = obj.vip.first()
+        if vip:
+            return not vip.is_expired()
+        return False
