@@ -8,9 +8,23 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
+from exceptions.player_shop import DailyRewardEligibilityError
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
-from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage, Package
+from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage, Package, \
+    DailyRewardPackage
 from user.models import Player, User, NormalPlayer, GuestPlayer
+
+
+class PlayerRewardPackage(BaseModel):
+    player = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name=_("Player"))
+    package = models.ForeignKey(RewardPackage, on_delete=models.CASCADE, verbose_name=_("Reward Package"))
+
+    class Meta:
+        verbose_name = _("Player Reward Package")
+        verbose_name_plural = _("Player Reward Packages")
+
+    def __str__(self):
+        return f"{self.player} - {self.package}"
 
 
 class PlayerWallet(BaseModel):
@@ -51,12 +65,15 @@ class PlayerWallet(BaseModel):
         self.add_shop_package(package, description="buying.")
 
     def pay(self, currency: Currency, amount: int, description: str = None):
-        player_currency = self.get_player_currency(currency)
-        player_currency.balance -= amount
-        player_currency.save()
-        PlayerWalletLog.objects.create(player=self.player, description=description,
-                                       transaction_type=PlayerWalletLog.TransactionType.SPEND,
-                                       currency=currency, amount=amount)
+        if self.has_enough_credit(currency=currency, amount=amount):
+            player_currency = self.get_player_currency(currency)
+            player_currency.balance -= amount
+            player_currency.save()
+            PlayerWalletLog.objects.create(player=self.player, description=description,
+                                           transaction_type=PlayerWalletLog.TransactionType.SPEND,
+                                           currency=currency, amount=amount)
+        else:
+            raise NotEnoughCreditError(_(f"Player does not have enough {currency} to pay."))
 
     def _add_package_base(self, package: Package, description):
         player_wallet_log_objects = []
@@ -92,12 +109,30 @@ class PlayerWallet(BaseModel):
 
     @atomic()
     def add_shop_package(self, package: ShopPackage, description=None):
-        self._add_package_base(package, description)
         self.pay(package.price_currency, package.price_amount, f"Bought {package.name}")
+        self._add_package_base(package, description)
 
     @atomic()
-    def add_reward_pacakge(self, package, description=None):
-        self._add_package_base(package, description)
+    def add_reward_pacakge(self, package: RewardPackage, description=None):
+        if not package.claimable:
+            self._add_package_base(package, description)
+        else:
+            PlayerRewardPackage.objects.create(player=self.player, package=package)
+
+    @atomic()
+    def claim_reward_package(self, player_package: PlayerRewardPackage):
+        self._add_package_base(player_package.package, f'{player_package.package.reward_type}')
+        player_package.adelete()
+
+    def claim_daily_reward(self):
+        player: Player = self.player.player
+        if not player.is_eligible_for_daily_reward():
+            raise DailyRewardEligibilityError(_("Player is not eligible to claim daily reward."))
+        reward_packages = DailyRewardPackage.load()
+        player = player.claim_daily_reward(max_streak=reward_packages.last().day_number)
+        reward_package = reward_packages.filter(day_number=player.daily_reward_streak)
+        if reward_package.exists():
+            self.add_reward_pacakge(reward_package.first())
 
     @classmethod
     def initialize(cls, player):

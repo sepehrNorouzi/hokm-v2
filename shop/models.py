@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from imagekit.models.fields import ImageSpecField
 from imagekit.processors import ResizeToFill
 
-from common.models import BaseModel, SingletonCachableModel
+from common.models import BaseModel, SingletonCachableModel, CachableModel
 
 
 class Market(BaseModel):
@@ -219,3 +219,17 @@ class ShopConfiguration(SingletonCachableModel):
     class Meta:
         verbose_name = _("Shop Configuration")
         verbose_name_plural = _("Shop Configurations")
+
+
+class DailyRewardPackage(CachableModel):
+    day_number = models.PositiveIntegerField(default=1, verbose_name=_("Day number"), unique=True)
+    reward = models.ForeignKey(to=RewardPackage, verbose_name=_("Reward"), on_delete=models.SET_NULL, null=True,
+                               blank=True)
+
+    def __str__(self):
+        return f'Day {self.day_number} reward'
+
+    class Meta:
+        verbose_name = _("Daily Reward")
+        verbose_name_plural = _("Daily Rewards")
+        ordering = ('day_number', )

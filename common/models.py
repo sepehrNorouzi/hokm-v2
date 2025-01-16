@@ -49,6 +49,30 @@ class SingletonCachableModel(SingletonModel):
         return obj
 
 
+class CachableModel(BaseModel):
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        super(CachableModel, self).save(*args, **kwargs)
+        cache.set(self.get_cache_key(), pickle.dumps(self.__class__.objects.filter(is_active=True)))
+
+    @classmethod
+    def get_cache_key(cls):
+        return f'{cls.__name__.upper()}_CACHE_KEY'
+
+    @classmethod
+    def load(cls):
+        obj = pickle.loads(cache.get(cls.get_cache_key()))
+
+        if not obj:
+            obj = cls.objects.filter(is_active=True)
+            cache.set(cls.get_cache_key(), pickle.dumps(obj))
+            return obj
+
+        return obj
+
+
 class Configuration(SingletonCachableModel):
     app_name = models.CharField(verbose_name=_("App Name"), max_length=255)
     game_package_name = models.CharField(verbose_name=_("Game Package Name"), max_length=255)

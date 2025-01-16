@@ -1,4 +1,5 @@
 import random
+from typing import Union
 
 from django.conf import settings
 from django.contrib.auth.models import PermissionsMixin, AbstractUser
@@ -50,7 +51,41 @@ class User(AbstractUser, PermissionsMixin):
         return GuestPlayer.objects.get(pk=self.pk)
 
 
-class Player(User):
+class PlayerDailyReward(models.Model):
+    daily_reward_streak = models.PositiveSmallIntegerField(default=0, verbose_name=_("Daily reward streak"))
+    last_claimed = models.DateTimeField(null=True, blank=True, verbose_name=_("Last claimed"))
+
+    @property
+    def last_claimed_delta(self) -> int:
+        if self.last_claimed:
+            return (timezone.now() - self.last_claimed).days
+        return 1
+
+    def is_eligible_for_daily_reward(self) -> bool:
+        if not self.last_claimed:
+            return True
+        return self.last_claimed_delta >= 1
+
+    def claim_daily_reward(self, max_streak: int) -> Union['PlayerDailyReward', None]:
+        if not self.is_eligible_for_daily_reward():
+            return None
+        if not self.last_claimed or self.last_claimed_delta > 1:
+            self.daily_reward_streak = 1
+        elif self.last_claimed_delta == 1:
+            self.daily_reward_streak = (self.daily_reward_streak % max_streak) + 1
+        self.last_claimed = timezone.now()
+        self.save()
+        return self
+
+    def reset_streak(self):
+        self.daily_reward_streak = 0
+        self.save()
+
+    class Meta:
+        abstract = True
+
+
+class Player(User, PlayerDailyReward):
     profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)

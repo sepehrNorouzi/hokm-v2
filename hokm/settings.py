@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+
 from cryptography.fernet import Fernet
 
 # EMAIL CONFIG
@@ -65,6 +66,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    "django_celery_results",
+    "django_celery_beat",
     'user.apps.UserConfig',
     'common.apps.CommonConfig',
     'shop.apps.ShopConfig',
@@ -114,7 +117,6 @@ DATABASES = {
         'CONN_MAX_AGE': int(os.getenv('CONN_MAX_AGE', default=60)),
     }
 }
-
 
 CACHES = {
     "default": {

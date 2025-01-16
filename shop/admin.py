@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from shop.models import Currency, ShopPackage, RewardPackage, CurrencyPackageItem, Asset, Market, ShopSection, \
-    ShopConfiguration, Cost
+    ShopConfiguration, Cost, DailyRewardPackage
 
 
 @admin.register(Currency)
@@ -81,3 +81,8 @@ class CostAdmin(admin.ModelAdmin):
 @admin.register(ShopConfiguration)
 class ShopConfigurationAdmin(admin.ModelAdmin):
     list_display = ['__str__', ]
+
+
+@admin.register(DailyRewardPackage)
+class DailyRewardPackageAdmin(admin.ModelAdmin):
+    list_display = ['day_number', 'reward', 'is_active', ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from player_shop.models import PlayerWallet, PlayerWalletLog, CurrencyBalance, AssetOwnership
+from player_shop.models import PlayerWallet, PlayerWalletLog, CurrencyBalance, AssetOwnership, PlayerRewardPackage
 
 
 class PlayerCurrencyAdminInline(admin.TabularInline):
@@ -20,6 +20,18 @@ class PlayerWalletAdmin(admin.ModelAdmin):
 
 @admin.register(PlayerWalletLog)
 class PlayerWalletLogAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['player', 'transaction_id', 'currency', 'amount', 'asset', 'transaction_type', ]
+    list_filter = ['currency', 'asset', 'transaction_type', ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
+@admin.register(PlayerRewardPackage)
+class PlayerRewardPackageAdmin(admin.ModelAdmin):
+    list_display = ('player', 'package', 'created_time', )
+    list_filter = ('package', )
+    date_hierarchy = 'created_time'

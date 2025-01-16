@@ -1,0 +1,3 @@
+class DailyRewardEligibilityError(Exception):
+    pass
+
