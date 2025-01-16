@@ -1,7 +1,7 @@
+from django.db.models import Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
-from django.db.models import Q
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -10,8 +10,9 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
-from shop.models import Market, ShopPackage, ShopSection
-from shop.serializers import ShopPackageSerializer, ShopSectionSerializer, MarketSerializer
+from shop.models import Market, ShopPackage, ShopSection, DailyRewardPackage
+from shop.serializers import ShopPackageSerializer, ShopSectionSerializer, MarketSerializer, \
+    DailyRewardPackageSerializer
 
 
 class MarketViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
@@ -77,3 +78,11 @@ class ShopViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMix
     @action(methods=['POST'], url_path='verify', url_name='verify', detail=False)
     def verify(self, request, *args, **kwargs):
         pass
+
+
+class DailyRewardViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
+    queryset = DailyRewardPackage.objects.filter(is_active=True)
+    serializer_class = DailyRewardPackageSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
+

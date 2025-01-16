@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from shop.models import ShopPackage, Currency, ShopSection, CurrencyPackageItem, Asset, Market
+from shop.models import ShopPackage, Currency, ShopSection, CurrencyPackageItem, Asset, Market, DailyRewardPackage, \
+    RewardPackage
 
 
 class MarketSerializer(serializers.ModelSerializer):
@@ -54,3 +55,20 @@ class ShopSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopSection
         fields = ['id', 'name', ]
+
+
+class RewardPackageSerializer(serializers.ModelSerializer):
+    currency_items = CurrencyItemSerializer(many=True)
+    asset_items = AssetItemSerializer(many=True)
+
+    class Meta:
+        model = RewardPackage
+        fields = ['id', 'name', 'currency_items', 'asset_items', ]
+
+
+class DailyRewardPackageSerializer(serializers.ModelSerializer):
+    reward = RewardPackageSerializer()
+
+    class Meta:
+        model = DailyRewardPackage
+        fields = ['id', 'reward', 'day_number', ]
