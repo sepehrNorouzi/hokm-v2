@@ -39,13 +39,12 @@ class SingletonCachableModel(SingletonModel):
 
     @classmethod
     def load(cls):
-        obj = pickle.loads(cache.get(cls.get_cache_key()))
-
-        if not obj:
+        cached = cache.get(cls.get_cache_key())
+        if cached:
+            obj = pickle.loads(cached)
+        else:
             obj = cls.objects.first()
             cache.set(cls.get_cache_key(), pickle.dumps(obj))
-            return obj
-
         return obj
 
 

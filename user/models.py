@@ -1,4 +1,5 @@
 import random
+from datetime import timedelta
 from typing import Union
 
 from django.conf import settings
@@ -85,7 +86,23 @@ class PlayerDailyReward(models.Model):
         abstract = True
 
 
-class Player(User, PlayerDailyReward):
+class PlayerLuckyWheel(models.Model):
+    last_lucky_wheel_spin = models.DateTimeField(null=True, blank=True, verbose_name=_("Last lucky wheel spin."))
+
+    def can_spin_lucky_wheel(self, lucky_wheel_cool_down: timedelta) -> bool:
+        if not self.last_lucky_wheel_spin:
+            return True
+        return timezone.now() - self.last_lucky_wheel_spin > lucky_wheel_cool_down
+
+    def spin_lucky_wheel(self):
+        self.last_lucky_wheel_spin = timezone.now()
+        self.save()
+
+    class Meta:
+        abstract = True
+
+
+class Player(User, PlayerDailyReward, PlayerLuckyWheel):
     profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)

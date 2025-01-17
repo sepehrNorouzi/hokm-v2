@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from shop.models import ShopPackage, Currency, ShopSection, CurrencyPackageItem, Asset, Market, DailyRewardPackage, \
-    RewardPackage
+    RewardPackage, LuckyWheel, LuckyWheelSection
 
 
 class MarketSerializer(serializers.ModelSerializer):
@@ -72,3 +72,23 @@ class DailyRewardPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyRewardPackage
         fields = ['id', 'reward', 'day_number', ]
+
+
+class LuckyWheelSectionSerializer(serializers.ModelSerializer):
+    package = RewardPackageSerializer()
+
+    class Meta:
+        model = LuckyWheelSection
+        fields = ['package', ]
+
+
+class LuckyWheelRetrieveSerializer(serializers.ModelSerializer):
+    sections = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LuckyWheel
+        fields = ['sections', 'cool_down', 'name', 'id', ]
+
+    @staticmethod
+    def get_sections(obj: LuckyWheel):
+        return LuckyWheelSectionSerializer(obj.sections, many=True)

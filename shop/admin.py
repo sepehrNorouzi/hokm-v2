@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from shop.models import Currency, ShopPackage, RewardPackage, CurrencyPackageItem, Asset, Market, ShopSection, \
-    ShopConfiguration, Cost, DailyRewardPackage
+    ShopConfiguration, Cost, DailyRewardPackage, LuckyWheel, LuckyWheelSection
 
 
 @admin.register(Currency)
@@ -86,3 +86,15 @@ class ShopConfigurationAdmin(admin.ModelAdmin):
 @admin.register(DailyRewardPackage)
 class DailyRewardPackageAdmin(admin.ModelAdmin):
     list_display = ['day_number', 'reward', 'is_active', ]
+
+
+class LuckyWheelSectionInline(admin.TabularInline):
+    model = LuckyWheelSection
+    extra = 1
+
+
+@admin.register(LuckyWheel)
+class LuckyWheelAdmin(admin.ModelAdmin):
+    inlines = [LuckyWheelSectionInline, ]
+    list_display = ['__str__', 'cool_down', 'sections_count', 'accumulated_chance', ]
+

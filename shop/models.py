@@ -1,7 +1,10 @@
 import math
+import random
+from datetime import timedelta
 
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from imagekit.models.fields import ImageSpecField
@@ -232,4 +235,52 @@ class DailyRewardPackage(CachableModel):
     class Meta:
         verbose_name = _("Daily Reward")
         verbose_name_plural = _("Daily Rewards")
-        ordering = ('day_number', )
+        ordering = ('day_number',)
+
+
+class LuckyWheel(CachableModel):
+    name = models.CharField(verbose_name=_("Name"), max_length=255, default="Wheel of fortune")
+    cool_down = models.DurationField(verbose_name=_('Cool down'), default=timedelta(days=1))
+
+    @property
+    def accumulated_chance(self) -> int:
+        return self.sections.filter(is_active=True).aggregate(Sum('chance'))['chance__sum']
+
+    @property
+    def sections_count(self) -> int:
+        return self.sections.filter(is_active=True).count()
+
+    def spin(self) -> 'RewardPackage':
+        sections = self.sections.filter(is_active=True).select_related("package")
+        weighted_sections = [(section, section.chance) for section in sections]
+
+        selected_section = random.choices(
+            population=[section for section, _ in weighted_sections],
+            weights=[weight for _, weight in weighted_sections],
+            k=1
+        )[0]
+        return selected_section.package
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _("Lucky Wheel")
+        verbose_name_plural = _("Lucky Wheel")
+
+
+class LuckyWheelSection(BaseModel):
+    package = models.ForeignKey(to=RewardPackage, verbose_name=_("Package"), on_delete=models.SET_NULL, null=True,
+                                blank=True)
+    chance = models.PositiveIntegerField(verbose_name=_("Chance"), default=0)
+
+    lucky_wheel = models.ForeignKey(to=LuckyWheel, verbose_name=_("Lucky Wheel"), on_delete=models.CASCADE,
+                                    related_name="sections")
+
+    def __str__(self):
+        return f'{self.lucky_wheel} section'
+
+    class Meta:
+        verbose_name = _("Lucky Wheel Section")
+        verbose_name_plural = _("Lucky Wheel Sections")
+        unique_together = (('package', 'lucky_wheel'),)

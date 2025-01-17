@@ -10,9 +10,9 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
-from shop.models import Market, ShopPackage, ShopSection, DailyRewardPackage
+from shop.models import Market, ShopPackage, ShopSection, DailyRewardPackage, LuckyWheel
 from shop.serializers import ShopPackageSerializer, ShopSectionSerializer, MarketSerializer, \
-    DailyRewardPackageSerializer
+    DailyRewardPackageSerializer, LuckyWheelRetrieveSerializer
 
 
 class MarketViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
@@ -83,6 +83,15 @@ class ShopViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMix
 class DailyRewardViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     queryset = DailyRewardPackage.objects.filter(is_active=True)
     serializer_class = DailyRewardPackageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ]
     pagination_class = PageNumberPagination
 
+
+class LuckyWheelViewSet(GenericViewSet, mixins.ListModelMixin):
+    queryset = LuckyWheel.objects.filter(is_active=True)
+    permission_classes = [IsAuthenticated, ]
+    serializer_class = LuckyWheelRetrieveSerializer
+
+    def list(self, request, *args, **kwargs):
+        wheel = LuckyWheel.load()
+        return Response(self.serializer_class(wheel).data, status=status.HTTP_200_OK)
