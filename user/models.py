@@ -89,10 +89,14 @@ class PlayerDailyReward(models.Model):
 class PlayerLuckyWheel(models.Model):
     last_lucky_wheel_spin = models.DateTimeField(null=True, blank=True, verbose_name=_("Last lucky wheel spin."))
 
-    def can_spin_lucky_wheel(self, lucky_wheel_cool_down: timedelta) -> bool:
-        if not self.last_lucky_wheel_spin:
-            return True
-        return timezone.now() - self.last_lucky_wheel_spin > lucky_wheel_cool_down
+    def _next_lucky_wheel(self, lucky_wheel_cool_down) -> timedelta:
+        if self.last_lucky_wheel_spin:
+            return self.last_lucky_wheel_spin + lucky_wheel_cool_down - timezone.now()
+        return timedelta(0)
+
+    def can_spin_lucky_wheel(self, lucky_wheel_cool_down: timedelta) -> tuple:
+        next_lucky_wheel_spin = self._next_lucky_wheel(lucky_wheel_cool_down)
+        return next_lucky_wheel_spin < timedelta(0), next_lucky_wheel_spin
 
     def spin_lucky_wheel(self):
         self.last_lucky_wheel_spin = timezone.now()

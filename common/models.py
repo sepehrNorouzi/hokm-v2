@@ -62,12 +62,13 @@ class CachableModel(BaseModel):
 
     @classmethod
     def load(cls):
-        obj = pickle.loads(cache.get(cls.get_cache_key()))
+        cached = cache.get(cls.get_cache_key())
+        if cached:
+            obj = pickle.loads(cached)
 
-        if not obj:
+        else:
             obj = cls.objects.filter(is_active=True)
             cache.set(cls.get_cache_key(), pickle.dumps(obj))
-            return obj
 
         return obj
 

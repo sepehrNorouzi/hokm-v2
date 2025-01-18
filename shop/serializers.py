@@ -91,4 +91,4 @@ class LuckyWheelRetrieveSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_sections(obj: LuckyWheel):
-        return LuckyWheelSectionSerializer(obj.sections, many=True)
+        return LuckyWheelSectionSerializer(obj.sections, many=True).data

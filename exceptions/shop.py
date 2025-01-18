@@ -4,3 +4,7 @@ class NotEnoughCreditError(Exception):
 
 class WrongShopFlowError(Exception):
     pass
+
+
+class EmptyLuckyWheelError(Exception):
+    pass

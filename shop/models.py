@@ -11,6 +11,7 @@ from imagekit.models.fields import ImageSpecField
 from imagekit.processors import ResizeToFill
 
 from common.models import BaseModel, SingletonCachableModel, CachableModel
+from exceptions.shop import EmptyLuckyWheelError
 
 
 class Market(BaseModel):
@@ -251,12 +252,15 @@ class LuckyWheel(CachableModel):
         return self.sections.filter(is_active=True).count()
 
     def spin(self) -> 'RewardPackage':
+        if self.sections_count < 1:
+            raise EmptyLuckyWheelError(_("Lucky Wheel is empty."))
+        
         sections = self.sections.filter(is_active=True).select_related("package")
         weighted_sections = [(section, section.chance) for section in sections]
 
         selected_section = random.choices(
-            population=[section for section, _ in weighted_sections],
-            weights=[weight for _, weight in weighted_sections],
+            population=[section for section, __ in weighted_sections],
+            weights=[weight for __, weight in weighted_sections],
             k=1
         )[0]
         return selected_section.package

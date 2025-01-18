@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.http import Http404
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 from rest_framework import mixins, status
 from rest_framework.decorators import action
@@ -9,10 +10,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
+from exceptions.player_shop import LuckyWheelCoolDownError
+from exceptions.shop import WrongShopFlowError, NotEnoughCreditError, EmptyLuckyWheelError
 from shop.models import Market, ShopPackage, ShopSection, DailyRewardPackage, LuckyWheel
 from shop.serializers import ShopPackageSerializer, ShopSectionSerializer, MarketSerializer, \
-    DailyRewardPackageSerializer, LuckyWheelRetrieveSerializer
+    DailyRewardPackageSerializer, LuckyWheelRetrieveSerializer, RewardPackageSerializer
 
 
 class MarketViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
@@ -93,5 +95,17 @@ class LuckyWheelViewSet(GenericViewSet, mixins.ListModelMixin):
     serializer_class = LuckyWheelRetrieveSerializer
 
     def list(self, request, *args, **kwargs):
-        wheel = LuckyWheel.load()
+        wheel = LuckyWheel.load().first()
         return Response(self.serializer_class(wheel).data, status=status.HTTP_200_OK)
+
+    @action(methods=['POST'], url_path='spin', url_name='spin', detail=True)
+    def spin(self, request, *args, **kwargs):
+        player_wallet = self.request.user.shop_info
+        wheel = self.get_object()
+        try:
+            reward = player_wallet.spin_lucky_wheel(wheel)
+            return Response(RewardPackageSerializer(reward).data, status=status.HTTP_200_OK)
+        except LuckyWheelCoolDownError as e:
+            return Response(data={"error": _(str(e))}, status=status.HTTP_425_TOO_EARLY)
+        except EmptyLuckyWheelError as e:
+            return Response(data={"error": _(str(e))}, status=status.HTTP_400_BAD_REQUEST)

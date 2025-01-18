@@ -8,10 +8,10 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
-from exceptions.player_shop import DailyRewardEligibilityError
+from exceptions.player_shop import DailyRewardEligibilityError, LuckyWheelCoolDownError
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
 from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage, Package, \
-    DailyRewardPackage
+    DailyRewardPackage, LuckyWheel
 from user.models import Player, User, NormalPlayer, GuestPlayer
 
 
@@ -133,6 +133,16 @@ class PlayerWallet(BaseModel):
         reward_package = reward_packages.filter(day_number=player.daily_reward_streak)
         if reward_package.exists():
             self.add_reward_pacakge(reward_package.first())
+
+    def spin_lucky_wheel(self, lucky_wheel: LuckyWheel):
+        player: Player = self.player.player
+        can_spin, next_spin = player.can_spin_lucky_wheel(lucky_wheel.cool_down)
+        if not can_spin:
+            raise LuckyWheelCoolDownError(_(f"Player can't spin lucky wheel for {next_spin}."))
+        reward = lucky_wheel.spin()
+        player.spin_lucky_wheel()
+        self.add_reward_pacakge(reward, 'Lucky wheel')
+        return reward
 
     @classmethod
     def initialize(cls, player):

@@ -50,7 +50,9 @@ class PlayerAdmin(admin.ModelAdmin):
                 'profile_name', 'cup', 'xp', 'gender', 'birth_date',
             )
         }),
-        (_("Important dates"), {"fields": ("last_login", "date_joined")})
+        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+        (_("Lucky Wheel"), {"fields": ("last_lucky_wheel_spin", )}),
+        (_("Daily reward"), {"fields": ("daily_reward_streak", "last_claimed")}),
     ]
 
     readonly_fields = ['xp', ]
