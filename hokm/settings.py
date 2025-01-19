@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'common.apps.CommonConfig',
     'shop.apps.ShopConfig',
     'player_shop.apps.PlayerShopConfig',
+    'social.apps.SocialConfig',
+
 ]
 
 AUTH_USER_MODEL = 'user.User'
