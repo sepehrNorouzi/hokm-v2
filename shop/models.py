@@ -203,7 +203,9 @@ class ShopPackage(Package):
 
 class RewardPackage(Package):
     class RewardType(models.TextChoices):
-        INIT_WALLET = 'initial_wallet', _('Initial Wallet')
+        INIT_WALLET = 'initial_wallet', _('Initial')
+        DAILY_REWARD = 'daily', _('Daily')
+        LUCKY_WHEEL = 'lucky_wheel', _('Lucky Wheel')
 
     reward_type = models.CharField(verbose_name=_("Reward Type"), choices=RewardType.choices, max_length=50)
     claimable = models.BooleanField(verbose_name=_("Claimable"), default=False)
