@@ -13,7 +13,8 @@ from user.permissions import IsGuestPlayer
 from user.serializers import NormalPlayerSignUpSerializer, NormalPlayerVerifySerializer, NormalPlayerSignInSerializer, \
     GuestPlayerSignUpSerializer, GuestPlayerSignInSerializer, GuestPlayerRecoverySerializer, \
     NormalPlayerForgetPasswordRequestSerializer, NormalPlayerResetPasswordSerializer, PlayerProfileSerializer, \
-    SupporterPlayerSerializer, SupporterPanelUseSerializer, SupporterRetrieveSerializer
+    SupporterPlayerSerializer, SupporterPanelUseSerializer, SupporterRetrieveSerializer, \
+    PlayerProfileSelfRetrieveSerializer
 from utils.random_functions import generate_random_string
 
 
@@ -158,16 +159,11 @@ class PlayerProfileView(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.R
     def get_object(self):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         user = get_object_or_404(User, pk=self.kwargs[lookup_url_kwarg])
-        return user.player
-
-    def get_user(self):
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        user = get_object_or_404(User, pk=self.kwargs[lookup_url_kwarg])
         return user
 
     def list(self, request, *args, **kwargs):
-        player = self.request.user.player
-        serializer = self.serializer_class(player)
+        player = self.request.user
+        serializer = PlayerProfileSelfRetrieveSerializer(player)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['GET'], detail=False, url_path='supports', url_name='supports',
@@ -182,7 +178,7 @@ class PlayerProfileView(viewsets.GenericViewSet, mixins.ListModelMixin, mixins.R
     @action(methods=['GET'], detail=True, url_path='supports', url_name='supports',
             serializer_class=SupporterRetrieveSerializer)
     def player_support_package(self, request, *args, **kwargs):
-        player = self.get_user()
+        player = self.get_object()
         packages = player.supports.filter(visible=True, approved=True, is_active=True, used=True)
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(packages, request)

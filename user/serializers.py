@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from user.models import NormalPlayer, GuestPlayer, VipPlayer, SupporterPlayerInfo
+from user.models import NormalPlayer, GuestPlayer, VipPlayer, SupporterPlayerInfo, Player
 
 
 class NormalPlayerSignUpSerializer(serializers.ModelSerializer):
@@ -127,6 +127,18 @@ class PlayerProfileSerializer(serializers.Serializer):
         if vip:
             return not vip.is_expired()
         return False
+
+
+class PlayerProfileSelfRetrieveSerializer(PlayerProfileSerializer):
+    daily_reward_streak = serializers.IntegerField(read_only=True)
+    last_claimed = serializers.DateTimeField(read_only=True)
+    last_lucky_wheel_spin = serializers.DateTimeField(read_only=True)
+    inviter = serializers.CharField(read_only=True)
+    invites_count = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_invites_count(obj: Player):
+        return obj.invite_count()
 
 
 class SupporterPlayerSerializer(serializers.ModelSerializer):

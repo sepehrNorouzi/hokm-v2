@@ -23,35 +23,6 @@ from utils.cryptography import encrypt_string, decrypt_string
 from utils.random_functions import generate_random_string
 
 
-class User(AbstractUser, PermissionsMixin):
-    email = models.EmailField(unique=True, null=True, blank=True, verbose_name=_("Email"))
-    device_id = models.CharField(max_length=255, unique=True, null=True, blank=True, verbose_name=_("Device ID"))
-    is_staff = models.BooleanField(default=False, verbose_name=_("Staff status"))
-    first_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("First name"))
-    last_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Last name"))
-
-    objects = UserManager()
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
-
-    class Meta:
-        verbose_name = _("User")
-        verbose_name_plural = _("Users")
-
-    def __str__(self):
-        return self.email or self.device_id or ""
-
-    def get_full_name(self):
-        return f"{self.first_name or ""} {self.last_name or ""}"
-
-    @property
-    def player(self):
-        if self.email:
-            return NormalPlayer.objects.get(pk=self.pk)
-        return GuestPlayer.objects.get(pk=self.pk)
-
-
 class PlayerDailyReward(models.Model):
     daily_reward_streak = models.PositiveSmallIntegerField(default=0, verbose_name=_("Daily reward streak"))
     last_claimed = models.DateTimeField(null=True, blank=True, verbose_name=_("Last claimed"))
@@ -106,14 +77,49 @@ class PlayerLuckyWheel(models.Model):
         abstract = True
 
 
-class Player(User, PlayerDailyReward, PlayerLuckyWheel):
-    profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
+class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
+    email = models.EmailField(unique=True, null=True, blank=True, verbose_name=_("Email"))
+    device_id = models.CharField(max_length=255, unique=True, null=True, blank=True, verbose_name=_("Device ID"))
+    is_staff = models.BooleanField(default=False, verbose_name=_("Staff status"))
+    first_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("First name"))
+    last_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Last name"))
+    inviter = models.ForeignKey(to='user.User', verbose_name=_("Inviter"), null=True, blank=True,
+                                related_name="invites",
+                                on_delete=models.SET_NULL)
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)
     is_blocked = models.BooleanField(verbose_name=_('Is blocked'), default=False)
     score = models.PositiveIntegerField(verbose_name=_("Score"), default=0)
     xp = models.PositiveIntegerField(verbose_name=_("Xp"), default=0, editable=False)
     cup = models.PositiveIntegerField(verbose_name=_("Cup"), default=0)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    class Meta:
+        verbose_name = _("User")
+        verbose_name_plural = _("Users")
+
+    def __str__(self):
+        return self.email or self.device_id or ""
+
+    def get_full_name(self):
+        return f"{self.first_name or ""} {self.last_name or ""}"
+
+    @property
+    def player(self):
+        if self.email:
+            return NormalPlayer.objects.get(pk=self.pk)
+        return GuestPlayer.objects.get(pk=self.pk)
+
+    def invite_count(self):
+        return self.invites.count()
+
+
+class Player(User):
+    profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
 
     class Meta:
         abstract = True
