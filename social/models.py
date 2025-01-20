@@ -22,7 +22,9 @@ class FriendshipRequest(BaseModel):
         return
 
     def accept(self):
-        return Friendship.create_friendship(self.sender, self.receiver)
+        friendship = Friendship.create_friendship(self.sender, self.receiver)
+        self.delete()
+        return friendship
 
     @classmethod
     def create(cls, sender_id: int, receiver_id: int):

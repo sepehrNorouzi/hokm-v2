@@ -44,7 +44,7 @@ class FriendshipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Friendship
-        fields = ['user_1', 'user_2', 'created_time', ]
+        fields = ['id', 'user_1', 'user_2', 'created_time', ]
 
     @staticmethod
     def get_user_1(obj):

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from exceptions.social import AlreadyFriendError
-from social.models import FriendshipRequest
+from social.models import FriendshipRequest, Friendship
 from social.serializers import FriendshipRequestSerializer, RequestedFriendshipSerializer, FriendshipSerializer
 
 
@@ -90,3 +90,14 @@ class FriendshipRequestViewSet(GenericViewSet, mixins.ListModelMixin, mixins.Des
         friendship_request = self.get_object()
         friendship_request.reject()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FriendshipViewSet(GenericViewSet, mixins.ListModelMixin, mixins.DestroyModelMixin):
+
+    queryset = Friendship.objects.all()
+    serializer_class = FriendshipSerializer
+    permission_classes = [IsAuthenticated, ]
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        return Friendship.list_friends(self.request.user)
