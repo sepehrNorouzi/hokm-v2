@@ -89,9 +89,6 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)
     is_blocked = models.BooleanField(verbose_name=_('Is blocked'), default=False)
-    score = models.PositiveIntegerField(verbose_name=_("Score"), default=0)
-    xp = models.PositiveIntegerField(verbose_name=_("Xp"), default=0, editable=False)
-    cup = models.PositiveIntegerField(verbose_name=_("Cup"), default=0)
 
     objects = UserManager()
 

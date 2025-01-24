@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'shop.apps.ShopConfig',
     'player_shop.apps.PlayerShopConfig',
     'social.apps.SocialConfig',
+    'player_statistic.apps.PlayerStatisticConfig'
 
 ]
 

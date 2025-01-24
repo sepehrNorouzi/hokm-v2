@@ -47,7 +47,7 @@ class PlayerAdmin(admin.ModelAdmin):
         }),
         (_('Profile info'), {
             'fields': (
-                'profile_name', 'cup', 'xp', 'gender', 'birth_date',
+                'profile_name', 'gender', 'birth_date',
             )
         }),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
@@ -55,7 +55,6 @@ class PlayerAdmin(admin.ModelAdmin):
         (_("Daily reward"), {"fields": ("daily_reward_streak", "last_claimed")}),
     ]
 
-    readonly_fields = ['xp', ]
     search_fields = UserBaseAdmin.search_fields
 
 
