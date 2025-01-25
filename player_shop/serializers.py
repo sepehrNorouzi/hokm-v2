@@ -9,7 +9,7 @@ class CurrencyBalanceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CurrencyBalance
-        fields = ['currency', 'balance', ]
+        fields = ['id', 'currency', 'balance', ]
 
 
 class AssetOwnerShipSerializer(serializers.ModelSerializer):
@@ -17,7 +17,7 @@ class AssetOwnerShipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssetOwnership
-        fields = ['asset', ]
+        fields = ['id', 'asset', 'is_current', ]
 
 
 class PlayerWalletSerializer(serializers.ModelSerializer):

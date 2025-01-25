@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel
-from exceptions.player_shop import DailyRewardEligibilityError, LuckyWheelCoolDownError
+from exceptions.player_shop import DailyRewardEligibilityError, LuckyWheelCoolDownError, InvalidAvatarError
 from exceptions.shop import WrongShopFlowError, NotEnoughCreditError
+from shop.choices import AssetType
 from shop.models import Currency, Asset, Market, ShopPackage, ShopConfiguration, RewardPackage, Package, \
     DailyRewardPackage, LuckyWheel
 from user.models import Player, User, NormalPlayer, GuestPlayer
@@ -152,6 +153,15 @@ class PlayerWallet(BaseModel):
         init_package: RewardPackage = ShopConfiguration.load().player_initial_package
         wallet.add_reward_pacakge(init_package, "Initiation.")
 
+    def current_asset(self, asset_type: AssetType) -> 'AssetOwnership':
+        return self.asset_ownerships.filter(asset__type=asset_type, is_current=True).first()
+
+    def set_avatar(self, asset_ownership: 'AssetOwnership') -> 'PlayerWallet':
+        if asset_ownership.asset.type != AssetType.AVATAR:
+            raise InvalidAvatarError(_(f"Selected asset should be {AssetType.AVATAR} not {asset_ownership.asset.type}"))
+        asset_ownership.set_current()
+        return self
+
 
 class CurrencyBalance(models.Model):
     wallet = models.ForeignKey(PlayerWallet, on_delete=models.CASCADE, related_name='currency_balances')
@@ -170,6 +180,7 @@ class CurrencyBalance(models.Model):
 class AssetOwnership(models.Model):
     wallet = models.ForeignKey(PlayerWallet, on_delete=models.CASCADE, related_name='asset_ownerships')
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, verbose_name=_("Asset"))
+    is_current = models.BooleanField(default=False, verbose_name=_("Is Current"))
 
     class Meta:
         unique_together = ('wallet', 'asset')
@@ -178,6 +189,15 @@ class AssetOwnership(models.Model):
 
     def __str__(self):
         return f"{self.asset.name} owned by {self.wallet.player.username}"
+
+    def save(self, *args, **kwargs):
+        if self.is_current:
+            self.__class__.objects.filter(asset__type=self.asset.type).exclude(id=self.id).update(is_current=False)
+        super(AssetOwnership, self).save(*args, **kwargs)
+
+    def set_current(self):
+        self.is_current = True
+        self.save()
 
 
 class PlayerWalletLog(BaseModel):

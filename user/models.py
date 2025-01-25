@@ -17,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from common.models import BaseModel
 from exceptions.user import ReVerifyException
+from shop.choices import AssetType
 from user.choices import Gender
 from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
 from utils.cryptography import encrypt_string, decrypt_string
@@ -113,6 +114,11 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
 
     def invite_count(self):
         return self.invites.count()
+
+    @property
+    def current_avatar(self):
+        current = self.shop_info.current_asset(AssetType.AVATAR)
+        return current.asset if current else None
 
 
 class Player(User):

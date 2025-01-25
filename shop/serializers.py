@@ -21,13 +21,13 @@ class CurrencyItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CurrencyPackageItem
-        fields = ['currency', 'amount', ]
+        fields = ['id', 'currency', 'amount', ]
 
 
 class AssetItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
-        fields = ['name', 'config', 'type']
+        fields = ['id', 'name', 'config', 'type']
 
 
 class ShopPackageSerializer(serializers.ModelSerializer):

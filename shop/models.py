@@ -12,6 +12,7 @@ from imagekit.processors import ResizeToFill
 
 from common.models import BaseModel, SingletonCachableModel, CachableModel
 from exceptions.shop import EmptyLuckyWheelError
+from shop.choices import AssetType
 
 
 class Market(BaseModel):
@@ -60,10 +61,6 @@ class Currency(BaseModel):
 
 
 class Asset(BaseModel):
-    class AssetType(models.TextChoices):
-        AVATAR = 'avatar', _('Avatar')
-        STICKER = 'sticker', _('Sticker')
-
     name = models.CharField(verbose_name=_("Asset Name"), max_length=100, unique=True)
     config = models.JSONField(null=True, blank=True, verbose_name=_("Asset Config"))
     type = models.CharField(verbose_name=_("Asset Type"), max_length=100, choices=AssetType.choices,

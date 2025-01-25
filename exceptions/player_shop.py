@@ -4,3 +4,7 @@ class DailyRewardEligibilityError(Exception):
 
 class LuckyWheelCoolDownError(Exception):
     pass
+
+
+class InvalidAvatarError(Exception):
+    pass

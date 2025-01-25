@@ -114,12 +114,23 @@ class GuestPlayerRecoverySerializer(serializers.ModelSerializer):
                   'recovery_string', 'password', ]
 
 
+class PlayerAvatarSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    config = serializers.JSONField(read_only=True)
+
+
 class PlayerProfileSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     profile_name = serializers.CharField(read_only=True)
     gender = serializers.CharField(read_only=True)
     birth_date = serializers.DateField(read_only=True)
     vip = serializers.SerializerMethodField()
+    current_avatar = serializers.SerializerMethodField(read_only=True)
+
+    @staticmethod
+    def get_current_avatar(obj):
+        current = obj.current_avatar
+        return PlayerAvatarSerializer(obj.current_avatar).data if current else None
 
     @staticmethod
     def get_vip(obj):
