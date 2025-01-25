@@ -3,6 +3,9 @@ from datetime import timedelta
 from pathlib import Path
 
 from cryptography.fernet import Fernet
+from redis import Redis
+
+from hokm.redis import get_redis_client
 
 # EMAIL CONFIG
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND")
@@ -148,6 +151,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+REDIS_CLIENT = get_redis_client()
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'

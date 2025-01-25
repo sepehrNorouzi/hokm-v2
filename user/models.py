@@ -1,3 +1,4 @@
+import pickle
 import random
 from datetime import timedelta
 from typing import Union
@@ -15,6 +16,7 @@ from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
+from django.conf import settings
 from common.models import BaseModel
 from exceptions.user import ReVerifyException
 from shop.choices import AssetType
@@ -90,6 +92,7 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)
     is_blocked = models.BooleanField(verbose_name=_('Is blocked'), default=False)
+    profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
 
     objects = UserManager()
 
@@ -99,6 +102,17 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
     class Meta:
         verbose_name = _("User")
         verbose_name_plural = _("Users")
+
+    def _get_caching_dto(self):
+        return {
+            "profile_name": self.profile_name,
+            "avatar": self.current_avatar,
+            "username": self.username,
+        }
+
+    def cache_user(self):
+        redis_client = settings.REDIS_CLIENT
+        redis_client.hset(f"USER:{self.pk}", mapping=self._get_caching_dto())
 
     def __str__(self):
         return self.email or self.device_id or ""
@@ -120,9 +134,12 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
         current = self.shop_info.current_asset(AssetType.AVATAR)
         return current.asset if current else None
 
+    def save(self, *args, **kwargs):
+        super(User, self).save(*args, **kwargs)
+        self.cache_user()
+
 
 class Player(User):
-    profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
 
     class Meta:
         abstract = True
@@ -213,16 +230,12 @@ class GuestPlayer(Player):
     @atomic()
     def convert_to_normal_player(self, email: str, password: str, profile_name: str = None):
         user = self.user_ptr
-        device_id = self.device_id
         normal_player = NormalPlayer(
             user_ptr=user,
             profile_name=profile_name or self.profile_name,
             gender=self.gender,
             birth_date=self.birth_date,
             is_blocked=self.is_blocked,
-            score=self.score,
-            xp=self.xp,
-            cup=self.cup,
             email=email,
             is_verified=False,
             username=email,

@@ -172,3 +172,7 @@ class SupporterPanelUseSerializer(serializers.Serializer):
     telegram_link = serializers.CharField(required=False)
     website_link = serializers.CharField(required=False)
     visible = serializers.BooleanField(default=False)
+
+
+class PlayerCacheSerializer(PlayerProfileSerializer):
+    pass

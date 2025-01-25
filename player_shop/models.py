@@ -160,6 +160,7 @@ class PlayerWallet(BaseModel):
         if asset_ownership.asset.type != AssetType.AVATAR:
             raise InvalidAvatarError(_(f"Selected asset should be {AssetType.AVATAR} not {asset_ownership.asset.type}"))
         asset_ownership.set_current()
+        self.player.cache_user()
         return self
 
 
