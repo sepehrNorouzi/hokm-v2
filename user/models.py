@@ -1,3 +1,4 @@
+import json
 import pickle
 import random
 from datetime import timedelta
@@ -105,6 +106,7 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
 
     def _get_caching_dto(self):
         return {
+            "id": self.id,
             "profile_name": self.profile_name,
             "avatar": self.current_avatar,
             "username": self.username,
@@ -112,7 +114,7 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
 
     def cache_user(self):
         redis_client = settings.REDIS_CLIENT
-        redis_client.hset(f"USER:{self.pk}", mapping=self._get_caching_dto())
+        redis_client.hset(f"USERS", self.id, json.dumps(self._get_caching_dto()))
 
     def __str__(self):
         return self.email or self.device_id or ""

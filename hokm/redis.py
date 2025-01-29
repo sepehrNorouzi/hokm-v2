@@ -16,7 +16,6 @@ def get_redis_client(is_test: bool = False) -> Redis:
 
     host = env.get(r_host)
     port = env.get(r_port, '6379')
-    db = db,
+    db = db
     password = env.get(r_password, '1')
-    print(host, port, db, password)
-    return Redis()
+    return Redis(host=host, port=port, db=db, decode_responses=True)
