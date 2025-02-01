@@ -117,8 +117,7 @@ class LeaderboardType(models.Model):
         archive_time = timezone.now()
         leaderboard_name = self.name
         leaderboard_key = self.leaderboard_type_key
-        leaderboard = leaderboard_redis.get_leaderboard(leaderboard_key)
-
+        leaderboard = leaderboard_redis.get_leaderboard_with_players(leaderboard_key)
         data = {
             "archive_time": archive_time,
             "name": leaderboard_name,
@@ -176,15 +175,25 @@ class LeaderboardType(models.Model):
         self.is_active = True
         self.save()
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.create_task()
+        super(LeaderboardType, self).save(*args, **kwargs)
+
 
 class Leaderboard(models.Model):
-    player = models.ForeignKey(to="user.User", on_delete=models.CASCADE, verbose_name=_("Player"))
+    player = models.ForeignKey(to="user.User", on_delete=models.CASCADE, verbose_name=_("Player"),
+                               related_name='leaderboard')
     score = models.PositiveIntegerField(default=0, verbose_name=_("Score"), editable=False)
 
     def add_score(self, score):
         self.score += score
         self.save()
-        keys = LeaderboardType.objects.filter(is_active=True, start_time__lte=timezone.now())
+        types = LeaderboardType.objects.filter(is_active=True, start_time__lte=timezone.now())
+        print(types)
         leaderboard_redis = LeaderboardRedis(settings.REDIS_CLIENT)
-        for key in keys:
-            leaderboard_redis.increment_player_score(key, self.player.id, score)
+        for t in types:
+            leaderboard_redis.increment_player_score(t.leaderboard_type_key, self.player.id, score)
+
+    def __str__(self):
+        return f'{self.player} - {self.score}'

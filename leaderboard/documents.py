@@ -4,8 +4,8 @@ from mongoengine import StringField, EmbeddedDocument, EmbeddedDocumentField, Do
 
 class LeaderboardResultDocument(EmbeddedDocument):
     id = IntField()
-    profile_name = StringField()
-    avatar = IntField()
+    profile_name = StringField(default=None)
+    avatar = IntField(default=None)
     username = StringField()
     score = IntField()
 

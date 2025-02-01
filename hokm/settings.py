@@ -6,6 +6,10 @@ from cryptography.fernet import Fernet
 from redis import Redis
 
 from hokm.redis import get_redis_client
+from mongoengine import connect as mongo_connect
+
+MONGO_CLIENT = mongo_connect(host=os.environ.get("MONGO_DB_URI"))
+
 
 # EMAIL CONFIG
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND")
@@ -76,7 +80,8 @@ INSTALLED_APPS = [
     'shop.apps.ShopConfig',
     'player_shop.apps.PlayerShopConfig',
     'social.apps.SocialConfig',
-    'player_statistic.apps.PlayerStatisticConfig'
+    'player_statistic.apps.PlayerStatisticConfig',
+    'leaderboard.apps.LeaderboardConfig',
 
 ]
 
