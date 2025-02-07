@@ -1,4 +1,5 @@
 import json
+import random
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -55,18 +56,21 @@ class LeaderboardRedis:
         count = self._redis.zcard(key)
         return self._redis.zrevrange(key, start=0, end=count, withscores=True)
 
-    def get_leaderboard_with_players(self, key):
-        leaderboard = self.get_leaderboard(key)
+    @classmethod
+    def get_leaderboard_with_players(cls, leaderboard):
         player_score = {player_id: score for player_id, score in leaderboard}
         players = list(player_score.keys())
-        player_details = self._redis.hmget("USERS", players)
+        player_details = []
+        if players:
+            player_details = settings.REDIS_CLIENT.hmget("USERS", players)
         results = []
-        for pid, detail in zip(players, player_details):
+
+        for index, (pid, detail) in enumerate(zip(players, player_details)):
             if detail:
                 detail = json.loads(detail)
                 detail['score'] = player_score[pid]
+                detail['rank'] = index + 1
                 results.append(detail)
-
         return results
 
 
@@ -117,7 +121,8 @@ class LeaderboardType(models.Model):
         archive_time = timezone.now()
         leaderboard_name = self.name
         leaderboard_key = self.leaderboard_type_key
-        leaderboard = leaderboard_redis.get_leaderboard_with_players(leaderboard_key)
+        leaderboard = leaderboard_redis.get_leaderboard(leaderboard_key)
+        leaderboard = LeaderboardRedis.get_leaderboard_with_players(leaderboard)
         data = {
             "archive_time": archive_time,
             "name": leaderboard_name,
@@ -127,7 +132,6 @@ class LeaderboardType(models.Model):
         document = LeaderboardDocument(**data)
         document.save()
         return document
-        # ADD MONGO DB
 
     def create_task(self):
         if self.duration is None:
@@ -179,6 +183,17 @@ class LeaderboardType(models.Model):
         if not self.pk:
             self.create_task()
         super(LeaderboardType, self).save(*args, **kwargs)
+
+    def get_leaderboard(self, player_id):
+        leaderboard_redis = LeaderboardRedis(settings.REDIS_CLIENT)
+        leaderboard_key = self.leaderboard_type_key
+        top_players = leaderboard_redis.get_top_players(leaderboard_key, limit=100)
+        player_rank = leaderboard_redis.get_player_rank(leaderboard_key, player_id)
+        surrounding_players = leaderboard_redis.get_surrounding_players(leaderboard_key, player_id)
+        top_players = LeaderboardRedis.get_leaderboard_with_players(top_players)
+        surrounding_players = LeaderboardRedis.get_leaderboard_with_players(surrounding_players)
+        return top_players, surrounding_players, player_rank
+
 
 
 class Leaderboard(models.Model):

@@ -23,7 +23,7 @@ def get_redis_client(is_test: bool = False) -> Redis:
         "host": host,
         "port": port,
         "db": db,
-        "decode_responses":True
+        "decode_responses": True
     }
     if password_required:
         connection_kwargs["password"] = password

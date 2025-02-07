@@ -8,6 +8,7 @@ class LeaderboardResultDocument(EmbeddedDocument):
     avatar = IntField(default=None)
     username = StringField()
     score = IntField()
+    rank = IntField()
 
 
 class LeaderboardDocument(Document):

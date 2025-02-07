@@ -8,6 +8,7 @@ from shop.urls import router as shop_router
 from player_shop.urls import router as player_shop_router
 from social.urls import router as social_router
 from player_statistic.urls import router as player_stats_router
+from leaderboard.urls import router as leaderboard_router
 
 router = DefaultRouter()
 
@@ -17,6 +18,7 @@ router.registry.extend(shop_router.registry)
 router.registry.extend(player_shop_router.registry)
 router.registry.extend(social_router.registry)
 router.registry.extend(player_stats_router.registry)
+router.registry.extend(leaderboard_router.registry)
 
 urlpatterns = [
     path('', lambda request: redirect(to='admin/', permenant=True)),
