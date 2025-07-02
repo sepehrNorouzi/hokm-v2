@@ -1,9 +1,9 @@
 import uuid
-
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from common.models import BaseModel, SingletonModel
+from match.controllers import PlayerMatch, PlayerMatchCheckout
 from match.exceptions import MatchJoinError
 
 
@@ -18,32 +18,6 @@ class MatchConfiguration(SingletonModel):
         verbose_name_plural = _("Match Configuration")
 
 
-class PlayerMatch:
-    def __init__(self, player, match_type):
-        self.player = player
-        self.match_type = match_type
-        self.errors = dict()
-
-    def _is_player_blocked(self):
-        pass
-
-    def _simultaneous_game_check(self):
-        pass
-
-    def _can_player_pay(self):
-        pass
-
-    def can_join(self) -> tuple[bool, dict]:
-        self._simultaneous_game_check()
-        self._is_player_blocked()
-        self._can_player_pay()
-        can_join = len(self.errors.keys()) == 0
-        return can_join, self.errors
-
-    def pay_match_entry(self):
-        pass
-
-
 class MatchType(BaseModel):
     name = models.CharField(max_length=100, verbose_name=_("Name"), unique=True)
     priority = models.PositiveSmallIntegerField(verbose_name=_("Priority"), default=1)
@@ -56,14 +30,16 @@ class MatchType(BaseModel):
 
     # Winner
     winner_package = models.ForeignKey(to='shop.RewardPackage', on_delete=models.SET_NULL,
-                                       verbose_name=_("Winner package"), null=True, blank=True)
+                                       verbose_name=_("Winner package"), null=True, blank=True,
+                                       related_name='match_type_winner_packages')
     winner_xp = models.PositiveSmallIntegerField(verbose_name=_("Winner XP"), default=0)
     winner_cup = models.PositiveSmallIntegerField(verbose_name=_("Winner Cup"), default=0)
     winner_score = models.PositiveSmallIntegerField(verbose_name=_("Winner Score"), default=0)
 
     # Loser
     loser_package = models.ForeignKey(to='shop.RewardPackage', on_delete=models.SET_NULL,
-                                      verbose_name=_("Loser package"), null=True, blank=True)
+                                      verbose_name=_("Loser package"), null=True, blank=True,
+                                      related_name='match_type_loser_packages')
     loser_xp = models.PositiveSmallIntegerField(verbose_name=_("Loser XP"), default=0)
     loser_cup = models.PositiveSmallIntegerField(verbose_name=_("Loser Cup"), default=0)
     loser_score = models.PositiveSmallIntegerField(verbose_name=_("Loser Score"), default=0)
@@ -105,14 +81,37 @@ class Match(BaseModel):
         match_type.pay_match_entry(player=owner)
         return cls.objects.create(uuid=match_uuid, players=players, match_type=match_type)
 
-    def check_out(self):
-        pass
+    def check_out(self, player_data, player):
+        player_checkout_manager = PlayerMatchCheckout(player, self.match_type)
+        return player_checkout_manager.check_out_player(player_data['result'])
 
-    def finish(self):
-        pass
+    def finish(self, results):
+        players_data = results["players"]
+        stat_log = dict()
+        for player_data in players_data:
+            try:
+                player = User.objects.get(id=player_data["id"])
+            except User.DoesNotExist:
+                continue
+            stat_log[player.username] = self.check_out(player_data, player)
+        result = self.create_results({**results, "stat_log": stat_log})
+        self.delete()
+        return result
 
-    def create_results(self):
-        pass
+    def create_results(self, results):
+        match_uuid = self.uuid
+        players = self.players.all()
+        history = {
+            **results,
+            "recorded_players": [
+                {
+                    "id": player.id,
+                    "profile_name": player.profile_name,
+                } for player in players.all()
+            ]
+
+        }
+        return MatchResult.create(match_uuid=match_uuid, players=players, history=history, match_type=self.match_type)
 
     def archive_results(self):
         pass
@@ -120,3 +119,24 @@ class Match(BaseModel):
     class Meta:
         verbose_name = _("Match")
         verbose_name_plural = _("Matches")
+
+
+class MatchResult(BaseModel):
+    match_uuid = models.UUIDField(verbose_name="UUID", default=uuid.uuid4, editable=False)
+    players = models.ManyToManyField(to='user.User', verbose_name=_("Players"), blank=True, related_name="game_results")
+    match_type = models.ForeignKey(to=MatchType, on_delete=models.SET_NULL, verbose_name=_("Match Type"),
+                                   related_name="match_results", null=True, blank=True)
+    history = models.JSONField(verbose_name=_("History"), default=dict)
+
+    class Meta:
+        verbose_name = _("Match Result")
+        verbose_name_plural = _("Match Results")
+
+    def __str__(self):
+        return self.match_uuid.__str__()
+
+    @classmethod
+    def create(cls, match_uuid, players, match_type, history):
+        obj = cls.objects.create(match_uuid=match_uuid, match_type=match_type, history=history)
+        obj.players.add(*players)
+        return obj

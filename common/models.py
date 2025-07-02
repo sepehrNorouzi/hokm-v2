@@ -20,7 +20,7 @@ class SingletonModel(BaseModel):
         abstract = True
 
     def save(self, *args, **kwargs):
-        if self.__class__.objects.count() >= 1:
+        if self.__class__.objects.count() > 1:
             raise ValidationError(_(f"There can only be one {self.__class__.__name__}."))
         super(SingletonModel, self).save(*args, **kwargs)
 
@@ -44,6 +44,8 @@ class SingletonCachableModel(SingletonModel):
             obj = pickle.loads(cached)
         else:
             obj = cls.objects.first()
+            if not obj:
+                return cls.objects.create()
             cache.set(cls.get_cache_key(), pickle.dumps(obj))
         return obj
 

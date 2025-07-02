@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'social.apps.SocialConfig',
     'player_statistic.apps.PlayerStatisticConfig',
     'leaderboard.apps.LeaderboardConfig',
+    'match.apps.MatchConfig'
 
 ]
 

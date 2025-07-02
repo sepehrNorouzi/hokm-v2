@@ -120,6 +120,13 @@ class Package(BaseModel):
                                     default=SupportType.NONE)
     vip = models.BooleanField(default=False, verbose_name=_("VIP"))
     vip_duration = models.DurationField(verbose_name=_("VIP Duration"), null=True, blank=True)
+    icon_thumbnail = ImageSpecField(
+        source='image',
+        processors=[ResizeToFill(30, 30)],
+        format='PNG',
+        options={'quality': 60}
+    )
+
 
     def _has_started(self):
         return self.start_time and self.start_time > timezone.now()
@@ -203,6 +210,7 @@ class RewardPackage(Package):
         INIT_WALLET = 'initial_wallet', _('Initial')
         DAILY_REWARD = 'daily', _('Daily')
         LUCKY_WHEEL = 'lucky_wheel', _('Lucky Wheel')
+        MATCH_REWARD = 'match_reward', _('Match Reward')
 
     reward_type = models.CharField(verbose_name=_("Reward Type"), choices=RewardType.choices, max_length=50)
     claimable = models.BooleanField(verbose_name=_("Claimable"), default=False)

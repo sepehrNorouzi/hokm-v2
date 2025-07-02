@@ -1,6 +1,7 @@
 import json
 import pickle
 import random
+import datetime
 from datetime import timedelta
 from typing import Union
 
@@ -71,7 +72,7 @@ class PlayerLuckyWheel(models.Model):
 
     def can_spin_lucky_wheel(self, lucky_wheel_cool_down: timedelta) -> tuple:
         next_lucky_wheel_spin = self._next_lucky_wheel(lucky_wheel_cool_down)
-        return next_lucky_wheel_spin < timedelta(0), next_lucky_wheel_spin
+        return next_lucky_wheel_spin <= timedelta(0), next_lucky_wheel_spin
 
     def spin_lucky_wheel(self):
         self.last_lucky_wheel_spin = timezone.now()
@@ -93,6 +94,7 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
     gender = models.IntegerField(verbose_name=_('Gender'), default=Gender.UNKNOWN, choices=Gender.choices)
     birth_date = models.DateField(verbose_name=_('Birth date'), null=True, blank=True)
     is_blocked = models.BooleanField(verbose_name=_('Is blocked'), default=False)
+    block_reliefe_time = models.DateTimeField(verbose_name=_('Block reliefe'), null=True, blank=True)
     profile_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Profile name"))
 
     objects = UserManager()
@@ -104,11 +106,25 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
         verbose_name = _("User")
         verbose_name_plural = _("Users")
 
+    def unblock(self):
+        self.is_blocked = False
+        self.block_reliefe_time = None
+        self.save()
+
+    def blocked(self) -> datetime.datetime | None:
+        if not self.is_blocked:
+            return None
+        if not self.block_reliefe_time or self.block_reliefe_time < timezone.now():
+            self.unblock()
+            return None
+        return self.block_reliefe_time
+
+
     def _get_caching_dto(self):
         return {
             "id": self.id,
             "profile_name": self.profile_name,
-            "avatar": self.current_avatar,
+            "avatar": self.current_avatar_json,
             "username": self.username,
         }
 
@@ -133,8 +149,23 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
 
     @property
     def current_avatar(self):
-        current = self.shop_info.current_asset(AssetType.AVATAR)
+        shop_info = getattr(self, "shop_info", None)
+        if not shop_info:
+            return None
+        current = shop_info.current_asset(AssetType.AVATAR)
         return current.asset if current else None
+
+    @property
+    def current_avatar_json(self):
+        avatar = self.current_avatar
+        if not avatar:
+            return None
+        return {
+            "avatar": {
+                "id": avatar.id,
+                "config": avatar.config,
+            }
+        }
 
     def save(self, *args, **kwargs):
         super(User, self).save(*args, **kwargs)

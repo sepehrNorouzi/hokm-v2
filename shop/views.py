@@ -34,7 +34,7 @@ class ShopViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMix
     def get_queryset(self):
         qs = super(ShopViewSet, self).get_queryset()
         market = self.request.user.shop_info.player_market
-        qs = qs.filter(Q(markets__in=[market]) | Q(markets__isnull=True))
+        qs = qs.filter(Q(markets=market) | Q(markets__isnull=True))
         return qs
 
     def get_object(self):

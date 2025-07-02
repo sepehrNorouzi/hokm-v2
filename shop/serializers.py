@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from shop.models import ShopPackage, Currency, ShopSection, CurrencyPackageItem, Asset, Market, DailyRewardPackage, \
-    RewardPackage, LuckyWheel, LuckyWheelSection
+    RewardPackage, LuckyWheel, LuckyWheelSection, Cost
 
 
 class MarketSerializer(serializers.ModelSerializer):
@@ -40,7 +40,7 @@ class ShopPackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopPackage
         fields = ['id', 'price_currency', 'discount', 'discount_start', 'discount_end', 'shop_section', 'sku',
-                  'has_discount', 'name', 'currency_items', 'asset_items', ]
+                  'has_discount', 'name', 'currency_items', 'asset_items', 'image']
 
     @staticmethod
     def get_has_discount(obj: ShopPackage):
@@ -92,3 +92,10 @@ class LuckyWheelRetrieveSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_sections(obj: LuckyWheel):
         return LuckyWheelSectionSerializer(obj.sections, many=True).data
+
+class CostSerializer(serializers.ModelSerializer):
+    currency = CurrencySerializer()
+
+    class Meta:
+        model = Cost
+        fields = ['currency', 'amount', ]
