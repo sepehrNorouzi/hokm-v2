@@ -198,6 +198,7 @@ SIMPLE_JWT = {
 
 CIPHER_SUITE = Fernet(os.environ.get("ENCRYPTION_KEY"))
 
+
 for d in NEEDED_DIRS:
     if not os.path.isdir(d):
         os.mkdir(d)
