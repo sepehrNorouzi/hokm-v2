@@ -21,37 +21,38 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
 # MINIO
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY')
-MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY')
+DEFAULT_FILE_STORAGE = "minio_storage.storage.MinioMediaStorage"
+STATICFILES_STORAGE = "minio_storage.storage.MinioStaticStorage"
+MINIO_STORAGE_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY')
+MINIO_STORAGE_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY')
 MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME")
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
-MINIO_ACCESS_URL = os.environ.get('MINIO_ACCESS_URL')
-AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
-AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
-AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT
-AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = True
-AWS_S3_FILE_OVERWRITE = False
+MINIO_STORAGE_ENDPOINT = os.getenv("MINIO_ENDPOINT")
+MINIO_STORAGE_USE_HTTPS = os.getenv("MINIO_USE_SSL", "false") == "True"
+MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
+MINIO_STORAGE_STATIC_BUCKET_NAME = 'local-static'
+MINIO_STORAGE_AUTO_CREATE_STATIC_BUCKET = True
+MINIO_STORAGE_MEDIA_BUCKET_NAME = MINIO_BUCKET_NAME
+MINIO_STORAGE_MEDIA_BACKUP_BUCKET = 'Recycle Bin'
 
-STORAGES = {
-    "default": {
-        "BACKEND": 'storages.backends.s3boto3.S3Boto3Storage',
-        "OPTIONS": {
-            'access_key': MINIO_ACCESS_KEY,
-            'secret_key': MINIO_SECRET_KEY,
-            'bucket_name': MINIO_BUCKET_NAME,
-            'endpoint_url': MINIO_ENDPOINT,
-            'default_acl': None,
-            'querystring_auth': True,
-            'file_overwrite': False,
-        },
-    },
-    'staticfiles': {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    }
-}
+# STORAGES = {
+#     "default": {
+#         "BACKEND": 'storages.backends.s3boto3.S3Boto3Storage',
+#         "OPTIONS": {
+#             'access_key': MINIO_ACCESS_KEY,
+#             'secret_key': MINIO_SECRET_KEY,
+#             'bucket_name': MINIO_BUCKET_NAME,
+#             'endpoint_url': MINIO_ENDPOINT,
+#             'default_acl': None,
+#             'querystring_auth': True,
+#             'file_overwrite': False,
+#         },
+#     },
+#     'staticfiles': {
+#         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+#     }
+# }
+
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -69,7 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'storages',
+    'minio_storage',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -213,7 +214,6 @@ STATICFILES_DIRS = [
     TEMP_ROOT,
 ]
 
-MEDIA_URL = f'{MINIO_ACCESS_URL}/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
