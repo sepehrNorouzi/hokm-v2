@@ -62,8 +62,8 @@ services:
       - .env
     volumes:
       - .:/app
-      - static_volume:/app/static
-      - media_volume:/app/media
+      - hokm_static_volume:/app/static
+      - hokm_media_volume:/app/media
     ports:
       - "8000:8000"
     depends_on:
@@ -155,5 +155,5 @@ volumes:
   hokm_postgres_data:
   hokm_mongo_data:
   hokm_minio_data:
-  media_volume:
-  static_volume:
+  hokm_media_volume:
+  hokm_static_volume:
