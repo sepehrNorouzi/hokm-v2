@@ -20,7 +20,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 from django.conf import settings
 from common.models import BaseModel
-from exceptions.user import ReVerifyException
+from exceptions.user import ReVerifyException, EmailAlreadyTakenError
 from shop.choices import AssetType
 from user.choices import Gender
 from user.managers import UserManager, NormalPlayerManager, GuestPlayerManager
@@ -262,6 +262,9 @@ class GuestPlayer(Player):
 
     @atomic()
     def convert_to_normal_player(self, email: str, password: str, profile_name: str = None):
+        existing_email = NormalPlayer.objects.filter(email=email).first()
+        if existing_email:
+            raise EmailAlreadyTakenError(_("This email is already is use"))
         user = self.user_ptr
         normal_player = NormalPlayer(
             user_ptr=user,

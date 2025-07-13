@@ -222,7 +222,7 @@ class RewardPackage(Package):
 
 class ShopConfiguration(SingletonCachableModel):
     player_initial_package = models.ForeignKey(to=RewardPackage, verbose_name=_("Player Initial Package"),
-                                               on_delete=models.RESTRICT, )
+                                               on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return 'Shop Configuration'
