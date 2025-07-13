@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from common.models import BaseModel, SingletonModel
 from match.controllers import PlayerMatch, PlayerMatchCheckout
 from match.exceptions import MatchJoinError
+from user.models import User
 
 
 class MatchConfiguration(SingletonModel):
