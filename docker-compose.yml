@@ -1,0 +1,159 @@
+services:
+  db:
+    container_name: db
+    image: postgres:15-alpine
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - hokm_postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - hokm_mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: "echo 'db.runCommand({ ping: 1 })' | mongosh --quiet"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
+    env_file:
+      - .env
+    volumes:
+      - hokm_minio_data:/data
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Web console (served by same container)
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py collectstatic --no-input &&
+      (python manage.py compilemessages || echo 'No translation files found or compilation failed') &&
+      gunicorn ${PROJECT_NAME}.wsgi:application --workers=${GUNICORN_WORKERS} --timeout=${GUNICORN_TIMEOUT} --bind 0.0.0.0:${GUNICORN_PORT}
+      "
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - hokm_static_volume:/app/static
+      - hokm_media_volume:/app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command:
+      - /bin/sh
+      - -c
+      # - Double dollars, so that the variable is not expanded by Docker Compose
+      # - Surround by quotes, so that the shell does not split the password
+      # - The ${variable:?message} syntax causes shell to exit with a non-zero
+      #   code and print a message, when the variable is not set or empty
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+    env_file:
+      - .env
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A ${PROJECT_NAME} worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A ${PROJECT_NAME} beat --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A ${PROJECT_NAME} flower --port=5555 --basic-auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery
+      - celery-beat
+    restart: always
+
+  nginx:
+      image: nginx:alpine
+      depends_on:
+        - web
+      ports:
+        - "80:80"
+      volumes:
+        - ./nginx/conf.d:/etc/nginx/conf.d
+        - ./static:/app/static  # if you're serving static files via Nginx
+        - ./media:/app/media    # if media files are stored locally
+      restart: always
+
+volumes:
+  hokm_postgres_data:
+  hokm_mongo_data:
+  hokm_minio_data:
+  hokm_media_volume:
+  hokm_static_volume:
