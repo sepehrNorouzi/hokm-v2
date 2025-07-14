@@ -10,7 +10,7 @@ from decimal import Decimal
 from user.models import NormalPlayer
 from shop.models import (
     Market, ShopPackage, Currency, ShopSection, CurrencyPackageItem,
-    DailyRewardPackage, RewardPackage, LuckyWheel, LuckyWheelSection, Cost
+    DailyRewardPackage, RewardPackage, LuckyWheel, LuckyWheelSection, Cost, ShopConfiguration
 )
 from player_shop.models import PlayerWallet, CurrencyBalance
 
@@ -101,12 +101,21 @@ class ShopViewSetTests(APITestCase):
         self.user.is_verified = True
         self.user.save()
 
+        self.initial_package = RewardPackage.objects.create(
+            name='Initial Package',
+            reward_type=RewardPackage.RewardType.INIT_WALLET
+        )
+
+        self.shop_config = ShopConfiguration.objects.create(
+            player_initial_package=self.initial_package
+        )
+
         # Create player wallet
         self.market = Market.objects.create(name='Test Market', is_active=True)
-        self.wallet, c = PlayerWallet.objects.get_or_create(player=self.user, defaults={"player_market": self.market})
+        self.wallet = self.user.shop_info
+        self.wallet.player_market = self.market
+        self.wallet.save()
 
-        # Create market and assign to user
-        # Create currencies
         self.in_app_currency = Currency.objects.create(
             name='Coins',
             type=Currency.CurrencyType.IN_APP
@@ -134,7 +143,7 @@ class ShopViewSetTests(APITestCase):
             shop_section=self.section,
             sku='coin_pack_001'
         )
-        # self.in_app_package.markets.add(self.market)
+        self.in_app_package.markets.add(self.market)
 
         self.real_money_package = ShopPackage.objects.create(
             name='Premium Pack',

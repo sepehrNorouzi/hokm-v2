@@ -50,10 +50,10 @@ class ShopViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMix
         return obj
 
     def list(self, request, *args, **kwargs):
-        section = self.request.query_params.get('section', None)
+        section: str = self.request.query_params.get('section', None)
         qs = self.get_queryset()
-        if section and isinstance(section, int):
-            qs = qs.filter(section_id=int(section))
+        if section and section.isnumeric():
+            qs = qs.filter(shop_section_id=int(section))
         pagination = self.paginate_queryset(qs)
         serializer = self.get_serializer(pagination, many=True)
         response = self.get_paginated_response(serializer.data)
