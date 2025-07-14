@@ -16,7 +16,10 @@ class PlayerLevel(BaseModel):
 
     @classmethod
     def get_first_level(cls) -> 'PlayerLevel':
-        return cls.objects.get_or_create(start_xp=0)[0]
+        obj = cls.objects.first()
+        if not obj:
+            return cls.objects.create(start_xp=0)
+        return obj
 
     @classmethod
     def get_xp_cap(cls) -> int:
