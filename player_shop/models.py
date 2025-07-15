@@ -151,7 +151,8 @@ class PlayerWallet(BaseModel):
         if not c:
             return
         init_package: RewardPackage = ShopConfiguration.load().player_initial_package
-        wallet.add_reward_package(init_package, "Initiation.")
+        if init_package:
+            wallet.add_reward_package(init_package, "Initiation.")
 
     def current_asset(self, asset_type: AssetType) -> 'AssetOwnership':
         return self.asset_ownerships.filter(asset__type=asset_type, is_current=True).first()

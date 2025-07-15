@@ -28,6 +28,7 @@ class Market(BaseModel):
     class Meta:
         verbose_name = _('Market')
         verbose_name_plural = _('Markets')
+        ordering = ['created_time', ]
 
 
 class Currency(BaseModel):
@@ -109,7 +110,7 @@ class Package(BaseModel):
 
     start_time = models.DateTimeField(verbose_name=_("Start Time"), null=True, blank=True, )
     name = models.CharField(verbose_name=_("Name"), unique=True, max_length=255)
-    priority = models.PositiveIntegerField(verbose_name=_("Priority"), help_text=_("1 is More important"))
+    priority = models.PositiveIntegerField(verbose_name=_("Priority"), help_text=_("1 is More important"), default=1)
     expiration_date = models.DateTimeField(verbose_name=_("Expired time"), null=True, blank=True, )
     image = models.ImageField(upload_to='package', null=True, blank=True, verbose_name=_("Image"))
     config = models.JSONField(null=True, blank=True, verbose_name=_("Config"))
@@ -222,7 +223,7 @@ class RewardPackage(Package):
 
 class ShopConfiguration(SingletonCachableModel):
     player_initial_package = models.ForeignKey(to=RewardPackage, verbose_name=_("Player Initial Package"),
-                                               on_delete=models.RESTRICT, )
+                                               on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return 'Shop Configuration'
@@ -246,7 +247,7 @@ class DailyRewardPackage(CachableModel):
         ordering = ('day_number',)
 
 
-class LuckyWheel(CachableModel):
+class LuckyWheel(BaseModel):
     name = models.CharField(verbose_name=_("Name"), max_length=255, default="Wheel of fortune")
     cool_down = models.DurationField(verbose_name=_('Cool down'), default=timedelta(days=1))
 

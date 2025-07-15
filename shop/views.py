@@ -42,23 +42,23 @@ class ShopViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMix
         if obj.markets.count() == 0:
             return obj
         market = self.request.user.shop_info.player_market
-        is_in_market = obj.markets.filter(id=market.id).exists()
-        if not is_in_market:
-            raise Http404
+        if market:
+            market = self.request.user.shop_info.player_market
+            is_in_market = obj.markets.filter(id=market.id).exists()
+            if not is_in_market:
+                raise Http404
         return obj
 
-    @method_decorator(cache_page(view_cache_timeout, key_prefix='SHOP_PACKAGE_CACHE'))
     def list(self, request, *args, **kwargs):
-        section = self.request.query_params.get('section', None)
+        section: str = self.request.query_params.get('section', None)
         qs = self.get_queryset()
-        if section and isinstance(section, int):
-            qs = qs.filter(section_id=int(section))
+        if section and section.isnumeric():
+            qs = qs.filter(shop_section_id=int(section))
         pagination = self.paginate_queryset(qs)
         serializer = self.get_serializer(pagination, many=True)
         response = self.get_paginated_response(serializer.data)
         return response
 
-    @method_decorator(cache_page(view_cache_timeout, key_prefix='SHOP_SECTION_CACHE'))
     @action(methods=['GET'], url_path='section', url_name='section', detail=False,
             serializer_class=ShopSectionSerializer)
     def sections(self, request, *args, **kwargs):
@@ -94,8 +94,11 @@ class LuckyWheelViewSet(GenericViewSet, mixins.ListModelMixin):
     permission_classes = [IsAuthenticated, ]
     serializer_class = LuckyWheelRetrieveSerializer
 
+    def get_queryset(self):
+        return LuckyWheel.objects.filter(is_active=True)
+
     def list(self, request, *args, **kwargs):
-        wheel = LuckyWheel.load().first()
+        wheel = self.get_queryset().first()
         return Response(self.serializer_class(wheel).data, status=status.HTTP_200_OK)
 
     @action(methods=['POST'], url_path='spin', url_name='spin', detail=True)
