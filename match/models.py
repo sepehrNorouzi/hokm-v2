@@ -117,9 +117,14 @@ class Match(BaseModel):
     def archive_results(self):
         pass
 
+    @classmethod
+    def get_player_current_match(cls, owner):
+        return cls.objects.filter(owner=owner).first()
+
     class Meta:
         verbose_name = _("Match")
         verbose_name_plural = _("Matches")
+        ordering = ('-created_time', )
 
 
 class MatchResult(BaseModel):

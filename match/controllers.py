@@ -22,13 +22,17 @@ class PlayerMatchCheckout:
 
     def _grant_win_reward(self):
         added_reward = self.match_type.winner_package
-        self.player.shop_info.add_reward_package(added_reward, "winning match")
-        return added_reward.id
+        if added_reward:
+            self.player.shop_info.add_reward_package(added_reward, "winning match")
+            return added_reward.id
+        return None
 
     def _grant_lose_reward(self):
         added_reward = self.match_type.loser_package
-        self.player.shop_info.add_reward_package(self.match_type.loser_package, "losing match")
-        return added_reward.id
+        if added_reward:
+            self.player.shop_info.add_reward_package(added_reward, "losing match")
+            return added_reward.id
+        return None
 
     def _grant_win_xp(self):
         added_xp = self.match_type.winner_xp
