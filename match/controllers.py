@@ -98,18 +98,19 @@ class PlayerMatch:
         if blocked:
             self.errors['block'] = _("Player is blocked for {delta} seconds").format(delta=blocked)
 
-
     def _simultaneous_game_check(self):
         sim_game = self.config.simultaneous_game
-        if not sim_game:
+        if not sim_game and self.player.is_in_match():
             self.errors['simultaneous_game'] = _("Player is in another match.")
 
     def _can_player_pay(self):
-        currency = self.match_type.entry_cost.currency
-        amount = self.match_type.entry_cost.amount
-        has_credit = self.player.shop_info.has_enough_credit(currency=currency, amount=amount)
-        if not has_credit:
-            self.errors["payment"] = _("Insufficient {currency} to pay").format(currency=currency)
+        entry_cost = self.match_type.entry_cost
+        if entry_cost:
+            currency = entry_cost.currency
+            amount = entry_cost.amount
+            has_credit = self.player.shop_info.has_enough_credit(currency=currency, amount=amount)
+            if not has_credit:
+                self.errors["payment"] = _("Insufficient {currency} to pay").format(currency=currency)
 
     def can_join(self) -> tuple[bool, dict]:
         self._simultaneous_game_check()
@@ -120,7 +121,8 @@ class PlayerMatch:
 
     def pay_match_entry(self):
         entry_cost = self.match_type.entry_cost
-        currency = entry_cost.currency
-        amount = entry_cost.amount
-        desc = f"Paid {entry_cost} to join match."
-        self.player.shop_info.pay(currency=currency, amount=amount, description=desc)
+        if entry_cost:
+            currency = entry_cost.currency
+            amount = entry_cost.amount
+            desc = f"Paid {entry_cost} to join match."
+            self.player.shop_info.pay(currency=currency, amount=amount, description=desc)
