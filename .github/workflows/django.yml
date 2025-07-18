@@ -81,6 +81,7 @@ jobs:
         POSTGRES_PASSWORD=postgres
         POSTGRES_HOST=localhost
         POSTGRES_PORT=5432
+        REDIS_URI=redis://localhost:6379/0
         REDIS_HOST=localhost
         REDIS_PORT=6379
         REDIS_PASSWORD=
@@ -200,6 +201,13 @@ jobs:
         POSTGRES_PASSWORD=postgres
         POSTGRES_HOST=localhost
         POSTGRES_PORT=5432
+        REDIS_URI=redis://localhost:6379/0
+        REDIS_HOST=localhost
+        REDIS_PORT=6379
+        REDIS_PASSWORD=
+        REDIS_DB=0
+        REDIS_PASSWORD_REQUIRED=False
+        MONGO_DB_URI=mongodb://localhost:27017/hokm_test
         EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
         EMAIL_HOST=localhost
         EMAIL_PORT=587
@@ -217,12 +225,6 @@ jobs:
         CELERY_BROKER_URL=redis://localhost:6379/0
         CELERY_RESULTS_BACKEND=redis://localhost:6379/0
         GAME_SERVER_KEY=test-game-server-key
-        REDIS_HOST=localhost
-        REDIS_PORT=6379
-        REDIS_PASSWORD=
-        REDIS_DB=0
-        REDIS_PASSWORD_REQUIRED=False
-        MONGO_DB_URI=mongodb://localhost:27017/hokm_test
         EOF
         
         # Test the Docker image
@@ -245,6 +247,7 @@ jobs:
         POSTGRES_PASSWORD=postgres
         POSTGRES_HOST=db
         POSTGRES_PORT=5432
+        REDIS_URI=redis://:test-redis-password@redis:6379/0
         REDIS_HOST=redis
         REDIS_PORT=6379
         REDIS_PASSWORD=test-redis-password
