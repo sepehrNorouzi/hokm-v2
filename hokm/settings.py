@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'storages',
     'rest_framework_simplejwt',
+    'drf_yasg',
     "django_celery_results",
     "django_celery_beat",
     'user.apps.UserConfig',
@@ -82,6 +83,35 @@ STORAGES = {
     'staticfiles': {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     }
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch'
+    ],
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'none',
+    'DEEP_LINKING': True,
+    'SHOW_EXTENSIONS': True,
+    'DEFAULT_MODEL_RENDERING': 'model',
+}
+
+REDOC_SETTINGS = {
+    'LAZY_RENDERING': False,
 }
 
 AUTH_USER_MODEL = 'user.User'
