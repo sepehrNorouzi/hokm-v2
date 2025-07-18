@@ -36,6 +36,7 @@ class MatchCreateSerializer(serializers.Serializer):
     players = serializers.ListField(child=serializers.IntegerField())
     match_type = serializers.IntegerField()
     uuid = serializers.UUIDField(default=uuid4)
+    owner_id = serializers.IntegerField()
 
 
     def validate_players(self, data):
@@ -59,7 +60,7 @@ class MatchCreateSerializer(serializers.Serializer):
         match_uuid: str = validated_data['uuid']
         match_type: MatchType = validated_data['match_type']
         players: QuerySet[User] = validated_data['players']
-        match: Match = Match.objects.create(uuid=match_uuid, match_type=match_type)
+        match: Match = Match.objects.create(uuid=match_uuid, match_type=match_type, owner_id=validated_data['owner_id'])
 
         for player in players:
             match_type.pay_match_entry(player)

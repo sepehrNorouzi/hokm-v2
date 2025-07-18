@@ -1,16 +1,15 @@
-from django.shortcuts import render
-from match.permissions import IsGameServer
-from match.serializers import MatchTypeSerializer, MatchSerializer, MatchCreateSerializer, MatchFinishSerializer
-from rest_framework import mixins, status
-from rest_framework import permissions
+from rest_framework import mixins, status, permissions
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from django.utils.translation import gettext_lazy as _
 
 from match.exceptions import MatchJoinError
 from match.models import MatchType, Match
+from match.permissions import IsGameServer
+from match.serializers import MatchTypeSerializer, MatchSerializer, MatchCreateSerializer, MatchFinishSerializer
 
 
 class MatchTypeViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
@@ -39,16 +38,25 @@ class MatchViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMi
     serializer_class = MatchSerializer
     queryset = Match.objects.filter(is_active=True)
     lookup_field = 'uuid'
-    permission_classes = [IsAuthenticated | IsGameServer]
+    game_server_actions = ['create_match', 'finish', ]
+    client_actions = ['list', 'retrieve', 'me', ]
+
+    def get_permissions(self):
+        if self.action in self.game_server_actions:
+            return [IsGameServer(), ]
+        return [permissions.OR(IsGameServer(), IsAuthenticated())]
 
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.filter(players=self.request.user)
+        if self.request.user.is_authenticated:
+            qs = qs.filter(players=self.request.user)
         return qs
 
+    def get_current_player_match(self) -> Match:
+        return Match.get_player_current_match(self.request.user)
+
     @action(methods=['POST'], detail=False, serializer_class=MatchCreateSerializer, url_name='create',
-            url_path='create',
-            permission_classes=[IsGameServer])
+            url_path='create',)
     def create_match(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -71,5 +79,15 @@ class MatchViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMi
             return Response(self.serializer_class({"result": result}).data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            print(e)
+            print("EXCEPTION:", e)
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], detail=False, serializer_class=MatchSerializer, url_path='me', url_name='me')
+    def me(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        match = self.get_current_player_match()
+        if not match:
+            return Response(data={"detail": _("User has no active match"), "code": "no_active_match"},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(self.serializer_class(match).data)

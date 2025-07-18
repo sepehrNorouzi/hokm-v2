@@ -202,6 +202,9 @@ class Player(User):
     def attempt_login(cls, **kwargs):
         raise NotImplementedError
 
+    def is_in_match(self):
+        return self.matches.filter(is_active=True).exists()
+
 
 class GuestPlayer(Player):
     recovery_string = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Recovery string"))
