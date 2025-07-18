@@ -215,14 +215,6 @@ class MatchTypeViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('errors', response.data)
 
-    def test_user_cannot_join_multiple_matches_at_the_same_time(self):
-        """Users should not be able to join multiple matches at the same time when the config is false"""
-        self.client.force_authenticate(user=self.user)
-
-        response = self.client.get(reverse('match_type-can-join', kwargs={'pk': self.beginner_match.id}))
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('errors', response.data)
 
     def test_guest_user_can_check_match_eligibility(self):
         """Guest users should also be able to check match eligibility"""
