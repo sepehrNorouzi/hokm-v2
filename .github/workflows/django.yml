@@ -185,12 +185,48 @@ jobs:
         file: ./Dockerfile
         push: false
         tags: hokm:test
+        load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Test Docker image
       run: |
-        docker run --rm hokm:test python manage.py check
+        # Create a minimal .env file for the container
+        cat > .env.docker << EOF
+        DEBUG=True
+        SECRET_KEY=test-secret-key-for-ci-only-not-secure
+        POSTGRES_DB=hokm_test
+        POSTGRES_USER=postgres
+        POSTGRES_PASSWORD=postgres
+        POSTGRES_HOST=localhost
+        POSTGRES_PORT=5432
+        EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+        EMAIL_HOST=localhost
+        EMAIL_PORT=587
+        EMAIL_USE_TLS=False
+        EMAIL_HOST_USER=test@example.com
+        EMAIL_HOST_PASSWORD=testpassword
+        DEFAULT_FROM_EMAIL=test@example.com
+        ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+        PROJECT_NAME=hokm
+        ALLOWED_HOSTS=localhost,127.0.0.1
+        ACCESS_TOKEN_LIFETIME=60
+        REFRESH_TOKEN_LIFETIME=1
+        OTP_EXPIRATION_TIME=300
+        DEFAULT_PAGE_SIZE=20
+        CELERY_BROKER_URL=redis://localhost:6379/0
+        CELERY_RESULTS_BACKEND=redis://localhost:6379/0
+        GAME_SERVER_KEY=test-game-server-key
+        REDIS_HOST=localhost
+        REDIS_PORT=6379
+        REDIS_PASSWORD=
+        REDIS_DB=0
+        REDIS_PASSWORD_REQUIRED=False
+        MONGO_DB_URI=mongodb://localhost:27017/hokm_test
+        EOF
+        
+        # Test the Docker image
+        docker run --rm --env-file .env.docker hokm:test python manage.py check --deploy
 
   docker-compose-test:
     runs-on: ubuntu-latest
