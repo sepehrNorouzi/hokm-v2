@@ -22,3 +22,5 @@ django-celery-results==2.6.0
 django_celery_beat==2.8.1
 mongoengine==0.29.1
 coverage==7.9.2
+
+drf-yasg==1.21.10
