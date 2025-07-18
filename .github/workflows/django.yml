@@ -86,6 +86,8 @@ jobs:
         REDIS_PORT=6379
         REDIS_PASSWORD=
         REDIS_DB=0
+        REDIS_TIMEOUT=3600
+        REDIS_KEY_PREFIX=hokm
         REDIS_PASSWORD_REQUIRED=False
         MONGO_DB_URI=mongodb://root:password@localhost:27017/hokm_test?authSource=admin
         EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
@@ -105,6 +107,22 @@ jobs:
         CELERY_BROKER_URL=redis://localhost:6379/0
         CELERY_RESULTS_BACKEND=redis://localhost:6379/0
         GAME_SERVER_KEY=test-game-server-key
+        CONN_MAX_AGE=60
+        GUNICORN_WORKERS=2
+        GUNICORN_TIMEOUT=30
+        GUNICORN_PORT=8000
+        FLOWER_USER=admin
+        FLOWER_PASSWORD=admin
+        MINIO_ROOT_USER=minioadmin
+        MINIO_ROOT_PASSWORD=minioadmin
+        MINIO_BUCKET_NAME=hokm-test
+        MINIO_CONSOLE_PORT=9001
+        AWS_ACCESS_KEY_ID=minioadmin
+        AWS_SECRET_ACCESS_KEY=minioadmin
+        AWS_STORAGE_BUCKET_NAME=hokm-test
+        AWS_S3_ENDPOINT_URL=http://localhost:9000
+        MEDIA_ROOT=/tmp/media
+        MEDIA_URL=/media/
         EOF
 
     - name: Run Django system checks
@@ -118,16 +136,24 @@ jobs:
     - name: Run tests with coverage
       run: |
         coverage run --source='.' manage.py test
-        coverage report
+        coverage report --show-missing
         coverage xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+    - name: Check coverage threshold
+      run: |
+        python -c "
+import sys
+import subprocess
+result = subprocess.run(['coverage', 'report', '--format=total'], capture_output=True, text=True)
+coverage = float(result.stdout.strip())
+print(f'Current coverage: {coverage}%')
+if coverage < 75:
+    print('❌ Coverage {:.1f}% is below the required 75% threshold'.format(coverage))
+    print('Please add more tests to increase coverage')
+    sys.exit(1)
+else:
+    print('✅ Coverage {:.1f}% meets the required 75% threshold'.format(coverage))
+"
 
     - name: Upload coverage reports to GitHub
       uses: actions/upload-artifact@v4
@@ -323,4 +349,4 @@ jobs:
         echo "❌ CI pipeline failed"
         echo "Please check the logs above for details"
         exit 1
-        
+      
