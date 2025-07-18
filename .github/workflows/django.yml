@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master, develop ]
 
 jobs:
   test:
@@ -349,4 +349,4 @@ else:
         echo "❌ CI pipeline failed"
         echo "Please check the logs above for details"
         exit 1
-      
+        
