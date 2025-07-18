@@ -88,6 +88,12 @@ jobs:
         REDIS_PASSWORD_REQUIRED=False
         MONGO_DB_URI=mongodb://root:password@localhost:27017/hokm_test?authSource=admin
         EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+        EMAIL_HOST=localhost
+        EMAIL_PORT=587
+        EMAIL_USE_TLS=False
+        EMAIL_HOST_USER=test@example.com
+        EMAIL_HOST_PASSWORD=testpassword
+        DEFAULT_FROM_EMAIL=test@example.com
         ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
         PROJECT_NAME=hokm
         ALLOWED_HOSTS=localhost,127.0.0.1
@@ -211,6 +217,12 @@ jobs:
         MONGO_INITDB_ROOT_PASSWORD=password
         MONGO_DB_URI=mongodb://root:password@mongodb:27017/hokm_test?authSource=admin
         EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+        EMAIL_HOST=localhost
+        EMAIL_PORT=587
+        EMAIL_USE_TLS=False
+        EMAIL_HOST_USER=test@example.com
+        EMAIL_HOST_PASSWORD=testpassword
+        DEFAULT_FROM_EMAIL=test@example.com
         ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
         PROJECT_NAME=hokm
         ALLOWED_HOSTS=localhost,127.0.0.1
@@ -234,18 +246,18 @@ jobs:
 
     - name: Build and test with Docker Compose
       run: |
-        docker-compose -f docker-compose.yml build
-        docker-compose -f docker-compose.yml up -d db redis mongodb
+        docker compose -f docker-compose.yml build
+        docker compose -f docker-compose.yml up -d db redis mongodb
         
         # Wait for services to be ready
         sleep 30
         
         # Run migrations and basic tests
-        docker-compose -f docker-compose.yml run --rm web python manage.py migrate
-        docker-compose -f docker-compose.yml run --rm web python manage.py check
+        docker compose -f docker-compose.yml run --rm web python manage.py migrate
+        docker compose -f docker-compose.yml run --rm web python manage.py check
         
         # Cleanup
-        docker-compose -f docker-compose.yml down -v
+        docker compose -f docker-compose.yml down -v
 
   notify-success:
     runs-on: ubuntu-latest
@@ -270,5 +282,6 @@ jobs:
     - name: Notify failure
       run: |
         echo "❌ CI pipeline failed"
-        echo "Please check the logs above for details."
+        echo "Please check the logs above for details"
         exit 1
+        
