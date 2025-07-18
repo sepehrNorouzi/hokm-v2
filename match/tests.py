@@ -95,7 +95,7 @@ class MatchTypeViewSetTests(APITestCase):
         self.beginner_match = MatchType.objects.create(
             name='Beginner Match',
             priority=1,
-            entry_cost=None,  # Free match
+            entry_cost=self.entry_cost,
             min_xp=0,
             min_cup=0,
             min_score=0,

@@ -2,13 +2,13 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from common.models import BaseModel, SingletonModel
+from common.models import BaseModel, SingletonModel, SingletonCachableModel
 from match.controllers import PlayerMatch, PlayerMatchCheckout
 from match.exceptions import MatchJoinError
 from user.models import User
 
 
-class MatchConfiguration(SingletonModel):
+class MatchConfiguration(SingletonCachableModel):
     simultaneous_game = models.BooleanField(default=False, verbose_name=_("Simultaneous availability"))
 
     def __str__(self):
@@ -51,12 +51,12 @@ class MatchType(BaseModel):
         ordering = ("priority", "name")
 
     def can_join(self, player):
-        player_match = PlayerMatch(player, self)
+        player_match = PlayerMatch(player=player, match_type=self, config=MatchConfiguration.load())
         can_join, errors = player_match.can_join()
         return can_join, errors
 
     def pay_match_entry(self, player):
-        player_match = PlayerMatch(player, self)
+        player_match = PlayerMatch(player=player, match_type=self, config=MatchConfiguration.load())
         player_match.pay_match_entry()
 
     def __str__(self):

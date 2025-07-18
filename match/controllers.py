@@ -1,3 +1,5 @@
+from django.utils.translation import gettext_lazy as _
+
 class PlayerMatchCheckout:
 
     def __init__(self, player, match_type):
@@ -85,19 +87,29 @@ class PlayerMatchCheckout:
 
 
 class PlayerMatch:
-    def __init__(self, player, match_type):
+    def __init__(self, player, match_type, config):
         self.player = player
         self.match_type = match_type
+        self.config = config
         self.errors = dict()
 
     def _is_player_blocked(self):
-        pass
+        blocked = self.player.blocked() is not None
+        if blocked:
+            self.errors['block'] = _("Player is blocked for {delta} seconds").format(delta=blocked)
+
 
     def _simultaneous_game_check(self):
-        pass
+        sim_game = self.config.simultaneous_game
+        if not sim_game:
+            self.errors['simultaneous_game'] = _("Player is in another match.")
 
     def _can_player_pay(self):
-        pass
+        currency = self.match_type.entry_cost.currency
+        amount = self.match_type.entry_cost.amount
+        has_credit = self.player.shop_info.has_enough_credit(currency=currency, amount=amount)
+        if not has_credit:
+            self.errors["payment"] = _("Insufficient {currency} to pay").format(currency=currency)
 
     def can_join(self) -> tuple[bool, dict]:
         self._simultaneous_game_check()
@@ -107,4 +119,8 @@ class PlayerMatch:
         return can_join, self.errors
 
     def pay_match_entry(self):
-        pass
+        entry_cost = self.match_type.entry_cost
+        currency = entry_cost.currency
+        amount = entry_cost.amount
+        desc = f"Paid {entry_cost} to join match."
+        self.player.shop_info.pay(currency=currency, amount=amount, description=desc)
