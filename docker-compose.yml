@@ -30,23 +30,6 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
-    env_file:
-      - .env
-    volumes:
-      - hokm_minio_data:/data
-    ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # Web console (served by same container)
-    restart: always
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   web:
     build:
       context: .
@@ -154,6 +137,5 @@ services:
 volumes:
   hokm_postgres_data:
   hokm_mongo_data:
-  hokm_minio_data:
   hokm_media_volume:
   hokm_static_volume:
