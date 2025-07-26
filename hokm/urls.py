@@ -12,6 +12,7 @@ from social.urls import router as social_router
 from player_statistic.urls import router as player_stats_router
 from leaderboard.urls import router as leaderboard_router
 from match.urls import router as match_router
+from hokm.swagger import swagger_urlpatterns
 
 
 router = DefaultRouter()
@@ -30,5 +31,5 @@ urlpatterns = [
     path('', lambda request: redirect(to='admin/', permenant=True)),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+] + swagger_urlpatterns + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
