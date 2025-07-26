@@ -92,3 +92,9 @@ static/
 temp/
 media/
 celerybeat-schedule
+
+ssl/
+*.key
+*.crt
+*.pem
+backups/

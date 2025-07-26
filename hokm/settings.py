@@ -3,13 +3,12 @@ from datetime import timedelta
 from pathlib import Path
 
 from cryptography.fernet import Fernet
+from mongoengine import connect as mongo_connect
 from redis import Redis
 
 from hokm.redis import get_redis_client
-from mongoengine import connect as mongo_connect
 
 MONGO_CLIENT = mongo_connect(host=os.environ.get("MONGO_DB_URI"))
-
 
 # EMAIL CONFIG
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND")
@@ -20,7 +19,6 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -30,6 +28,16 @@ DEBUG = os.environ.get('DEBUG', "False") == 'True'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 PROJECT_NAME = os.environ.get('PROJECT_NAME', "hokm")
+
+# Security
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "0") == "1"
+SECURE_PROXY_SSL_HEADER = os.environ.get("SECURE_PROXY_SSL_HEADER", "https")
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "3153600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "0") == "1"
+
+CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", "0") == "1"
+SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") == 1
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -194,7 +202,6 @@ SIMPLE_JWT = {
 
 CIPHER_SUITE = Fernet(os.environ.get("ENCRYPTION_KEY"))
 
-
 for d in NEEDED_DIRS:
     if not os.path.isdir(d):
         os.mkdir(d)
@@ -207,7 +214,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULTS_BACKEND")

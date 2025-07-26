@@ -1,34 +1,40 @@
 services:
   db:
     container_name: db
-    image: postgres:15-alpine
-    restart: always
+    image: postgres:17.4-alpine
+    restart: unless-stopped
     env_file:
       - .env
     volumes:
       - hokm_postgres_data:/var/lib/postgresql/data/
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
+    networks:
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
       interval: 10s
       timeout: 5s
       retries: 5
+    user: postgres
 
   mongodb:
-    image: mongo
-    restart: always
+    image: mongo:7
+    restart: unless-stopped
     env_file:
       - .env
     volumes:
       - hokm_mongo_data:/data/db
-    ports:
-      - "27017:27017"
+    expose:
+      - "27017"
+    networks:
+      - backend
     healthcheck:
       test: "echo 'db.runCommand({ ping: 1 })' | mongosh --quiet"
       interval: 10s
       timeout: 5s
       retries: 5
+    user: mongodb
 
   web:
     build:
@@ -47,33 +53,41 @@ services:
       - .:/app
       - hokm_static_volume:/app/static
       - hokm_media_volume:/app/media
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
+    networks:
+      - frontend
+      - backend
     depends_on:
       db:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: unless-stopped
     command:
       - /bin/sh
       - -c
-      # - Double dollars, so that the variable is not expanded by Docker Compose
-      # - Surround by quotes, so that the shell does not split the password
-      # - The ${variable:?message} syntax causes shell to exit with a non-zero
-      #   code and print a message, when the variable is not set or empty
-      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}" --appendonly yes
     env_file:
       - .env
-    ports:
-      - "6379:6379"
+    volumes:
+      - hokm_redis_data:/data
+    expose:
+      - "6379"
+    networks:
+      - backend
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "redis-cli", "--no-auth-warning", "-a", "$REDIS_PASSWORD", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    user: redis
 
   celery:
     build:
@@ -84,12 +98,18 @@ services:
       - .env
     volumes:
       - .:/app
+    networks:
+      - backend
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
 
   celery-beat:
     build:
@@ -100,12 +120,18 @@ services:
       - .env
     volumes:
       - .:/app
+    networks:
+      - backend
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
 
   flower:
     build:
@@ -114,28 +140,49 @@ services:
     command: celery -A ${PROJECT_NAME} flower --port=5555 --basic-auth=${FLOWER_USER}:${FLOWER_PASSWORD}
     env_file:
       - .env
-    ports:
-      - "5555:5555"
+    expose:
+      - "5555"
+    networks:
+      - frontend
+      - backend
     depends_on:
       - redis
       - celery
       - celery-beat
-    restart: always
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
 
   nginx:
-      image: nginx:alpine
-      depends_on:
-        - web
-      ports:
-        - "80:80"
-      volumes:
-        - ./nginx/conf.d:/etc/nginx/conf.d
-        - ./static:/app/static  # if you're serving static files via Nginx
-        - ./media:/app/media    # if media files are stored locally
-      restart: always
+    image: nginx:alpine
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro  # Read-only
+      - hokm_static_volume:/app/static:ro    # Read-only static files
+      - hokm_media_volume:/app/media:ro      # Read-only media files
+      - ./ssl:/etc/nginx/ssl:ro              # SSL certificates (create this directory)
+    networks:
+      - frontend
+    restart: unless-stopped
+    user: nginx
+
+networks:
+  frontend:
+    driver: bridge
+    internal: false
+  backend:
+    driver: bridge
+    internal: true
 
 volumes:
   hokm_postgres_data:
   hokm_mongo_data:
+  hokm_redis_data:
   hokm_media_volume:
   hokm_static_volume:
