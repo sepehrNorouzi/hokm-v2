@@ -170,7 +170,6 @@ services:
     networks:
       - frontend
     restart: unless-stopped
-    user: nginx
 
 networks:
   frontend:
