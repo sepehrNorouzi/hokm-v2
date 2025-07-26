@@ -209,12 +209,6 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
 ]
 
-NEEDED_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-    os.path.join(BASE_DIR, 'temp'),
-    os.path.join(BASE_DIR, 'media')
-]
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -232,16 +226,9 @@ SIMPLE_JWT = {
 
 CIPHER_SUITE = Fernet(os.environ.get("ENCRYPTION_KEY"))
 
-for d in NEEDED_DIRS:
-    if not os.path.isdir(d):
-        os.mkdir(d)
 
 STATIC_URL = f'/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-#
-# MEDIA_URL = f'/media/'
-#
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
