@@ -56,16 +56,13 @@ INSTALLED_APPS = [
 ]
 
 # MINIO
-AWS_ACCESS_KEY_ID = os.environ.get("MINIO_ROOT_USER")
-AWS_SECRET_ACCESS_KEY = os.environ.get("MINIO_ROOT_PASSWORD")
+AWS_ACCESS_KEY_ID = os.environ.get("MINIO_ACCESS_KEY")
+AWS_SECRET_ACCESS_KEY = os.environ.get("MINIO_SECRET_KEY")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("MINIO_BUCKET_NAME")
-AWS_S3_ENDPOINT_URL = 'http://172.16.11.28:9000'
-AWS_S3_USE_SSL = False
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_REGION_NAME = 'us-east-1'
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
-AWS_S3_VERIFY = False
+MINIO_SERVER_URL = os.environ.get("MINIO_ENDPOINT", None)
+AWS_S3_REGION_NAME = None
+AWS_S3_USE_SSL = True
+AWS_S3_ENDPOINT_URL = os.environ.get("MINIO_ENDPOINT", None)
 
 STORAGES = {
     "default": {
@@ -77,7 +74,8 @@ STORAGES = {
             'endpoint_url': AWS_S3_ENDPOINT_URL,
             'default_acl': None,
             'querystring_auth': True,
-            'file_overwrite': False,
+            'file_overwrite': True,
+            'use_ssl': AWS_S3_USE_SSL,
         },
     },
     'staticfiles': {

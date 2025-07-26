@@ -20,6 +20,10 @@ class MatchConfiguration(SingletonCachableModel):
 
 
 class MatchType(BaseModel):
+    class MatchTypeModes(models.TextChoices):
+        ONLINE = 'online', _('Online')
+        OFFLINE = 'offline', _('Offline')
+
     name = models.CharField(max_length=100, verbose_name=_("Name"), unique=True)
     priority = models.PositiveSmallIntegerField(verbose_name=_("Priority"), default=1)
     entry_cost = models.ForeignKey(to="shop.Cost", on_delete=models.SET_NULL, verbose_name=_("Entry cost"), null=True)
@@ -44,6 +48,8 @@ class MatchType(BaseModel):
     loser_xp = models.PositiveSmallIntegerField(verbose_name=_("Loser XP"), default=0)
     loser_cup = models.PositiveSmallIntegerField(verbose_name=_("Loser Cup"), default=0)
     loser_score = models.PositiveSmallIntegerField(verbose_name=_("Loser Score"), default=0)
+
+    mode = models.CharField(max_length=15, choices=MatchTypeModes.choices, default=MatchTypeModes.ONLINE)
 
     class Meta:
         verbose_name = _("Match Type")
@@ -74,13 +80,22 @@ class Match(BaseModel):
         return f'{self.owner} - {self.match_type}'
 
     @classmethod
-    def start(cls, owner, players, match_type: MatchType):
-        match_uuid = uuid.uuid4()
+    def get_random_players(cls, count: int):
+        return User.get_random_users(count=count)
+
+    @classmethod
+    def start(cls, match_uuid, owner, players, match_type: MatchType):
+        match_uuid = uuid.uuid4() if not match_uuid else match_uuid
+        players = list(players)
         can_join, errors = match_type.can_join(player=owner)
         if not can_join:
             raise MatchJoinError(errors)
         match_type.pay_match_entry(player=owner)
-        return cls.objects.create(uuid=match_uuid, players=players, match_type=match_type)
+        random_players = cls.get_random_players(count=4-len(players)) # Make variable
+        all_players = players + list(random_players)
+        match =  cls.objects.create(uuid=match_uuid, match_type=match_type, owner=owner)
+        match.players.set(all_players)
+        return match
 
     def check_out(self, player_data, player):
         player_checkout_manager = PlayerMatchCheckout(player, self.match_type)
