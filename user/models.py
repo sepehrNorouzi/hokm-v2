@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth.models import PermissionsMixin, AbstractUser
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, connection
 from django.db.models import QuerySet
 from django.db.transaction import atomic
 from django.template.loader import render_to_string
@@ -171,6 +171,18 @@ class User(AbstractUser, PermissionsMixin, PlayerDailyReward, PlayerLuckyWheel):
         super(User, self).save(*args, **kwargs)
         self.cache_user()
 
+    @classmethod
+    def get_random_users(cls, count):
+        if connection.vendor == 'postgresql':
+            return cls.objects.extra(select={'random': 'RANDOM()'}).order_by('random')[:count]
+        elif connection.vendor == 'mysql':
+            return cls.objects.extra(select={'random': 'RAND()'}).order_by('random')[:count]
+        else:
+            return cls.objects.order_by('?')[:count]
+
+    def is_in_match(self):
+        return self.matches.filter(is_active=True, owner_id=self.id).exists()
+
 
 class Player(User):
 
@@ -201,9 +213,6 @@ class Player(User):
     @classmethod
     def attempt_login(cls, **kwargs):
         raise NotImplementedError
-
-    def is_in_match(self):
-        return self.matches.filter(is_active=True).exists()
 
 
 class GuestPlayer(Player):

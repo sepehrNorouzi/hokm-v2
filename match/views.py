@@ -49,7 +49,7 @@ class MatchViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMi
     def get_queryset(self):
         qs = super().get_queryset()
         if self.request.user.is_authenticated:
-            qs = qs.filter(players=self.request.user)
+            qs = qs.filter(owner=self.request.user)
         return qs
 
     def get_current_player_match(self) -> Match:
@@ -61,7 +61,7 @@ class MatchViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMi
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            match = self.serializer_class().create(serializer.validated_data)
+            match = serializer.create(serializer.validated_data)
         except MatchJoinError as e:
             return Response(e.args[0], status=status.HTTP_400_BAD_REQUEST)
         return Response(MatchSerializer(match).data, status=status.HTTP_201_CREATED)
@@ -71,9 +71,7 @@ class MatchViewSet(GenericViewSet, mixins.ListModelMixin, mixins.RetrieveModelMi
     def finish(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        match: Match = get_object_or_404(Match.objects.all(), **filter_kwargs)
+        match = self.get_object()
         try:
             result = match.finish(serializer.validated_data)
             return Response(self.serializer_class({"result": result}).data, status=status.HTTP_201_CREATED)

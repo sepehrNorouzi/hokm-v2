@@ -327,13 +327,23 @@ class MatchViewSetTests(APITestCase):
         self.other_user.is_verified = True
         self.other_user.save()
 
+        self.forth_user = NormalPlayer.objects.create_user(
+            email='forth@example.com',
+            password='password123',
+            profile_name='ForthUser'
+        )
+
+        self.forth_user.is_verified = True
+        self.forth_user.save()
+
         # Create match type
         self.match_type = MatchType.objects.create(
             name='Test Match',
             priority=1,
             min_xp=0,
             min_cup=0,
-            min_score=0
+            min_score=0,
+            mode='offline'
         )
 
         # Create matches
@@ -366,11 +376,11 @@ class MatchViewSetTests(APITestCase):
         response = self.client.get(reverse('match-list'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 2)  # User is in 2 matches
+        self.assertEqual(len(response.data['results']), 1)
 
         match_uuids = [str(match['uuid']) for match in response.data['results']]
         self.assertIn(str(self.user_match.uuid), match_uuids)
-        self.assertIn(str(self.opponent_match.uuid), match_uuids)
+        self.assertNotIn(str(self.opponent_match.uuid), match_uuids)
         self.assertNotIn(str(self.other_match.uuid), match_uuids)
 
     def test_user_sees_empty_list_when_no_matches(self):
@@ -425,9 +435,10 @@ class MatchViewSetTests(APITestCase):
     def test_game_server_can_create_match(self, mock_env_get):
         """Game server should be able to create matches"""
         mock_env_get.return_value = 'test-server-key'
+        Match.objects.all().delete()
 
         match_data = {
-            'players': [self.user.id, self.opponent.id],
+            'players': [self.other_user.id],
             'match_type': self.match_type.id,
             'uuid': str(uuid4()),
             "owner_id": self.other_user.id
@@ -441,7 +452,7 @@ class MatchViewSetTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('uuid', response.data)
-        self.assertEqual(len(response.data['players']), 2)
+        self.assertEqual(len(response.data['players']), 4)
 
     def test_authenticated_user_cannot_create_match(self):
         """Regular authenticated users should not be able to create matches"""
