@@ -80,11 +80,8 @@ class Match(BaseModel):
         return f'{self.owner} - {self.match_type}'
 
     @classmethod
-    def get_random_players(cls, match_type):
-        if match_type.mode == match_type.MatchTypeModes.ONLINE:
-            return User.get_random_users(2)
-        else:
-            return User.get_random_users(3)
+    def get_random_players(cls, count: int):
+        return User.get_random_users(count=count)
 
     @classmethod
     def start(cls, match_uuid, owner, players, match_type: MatchType):
@@ -94,7 +91,7 @@ class Match(BaseModel):
         if not can_join:
             raise MatchJoinError(errors)
         match_type.pay_match_entry(player=owner)
-        random_players = cls.get_random_players(match_type)
+        random_players = cls.get_random_players(count=4-len(players)) # Make variable
         all_players = players + list(random_players)
         match =  cls.objects.create(uuid=match_uuid, match_type=match_type, owner=owner)
         match.players.set(all_players)
