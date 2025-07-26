@@ -62,7 +62,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
@@ -106,7 +105,6 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
@@ -128,7 +126,6 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
@@ -150,7 +147,6 @@ services:
       - celery
       - celery-beat
     restart: unless-stopped
-    read_only: true
     tmpfs:
       - /tmp
       - /var/tmp
